@@ -1,0 +1,10 @@
+package com.example.appointmentsystembackend.schedule;
+
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface WorkScheduleRepository extends JpaRepository<WorkSchedule, UUID> {
+	List<WorkSchedule> findByStaffId(UUID staffId);
+}
