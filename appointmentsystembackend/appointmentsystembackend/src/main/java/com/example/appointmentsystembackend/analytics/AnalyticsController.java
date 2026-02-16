@@ -29,6 +29,12 @@ public class AnalyticsController {
 		return ResponseEntity.ok(analyticsService.getAdminReports(range, department));
 	}
 
+	@GetMapping("/admin/dashboard")
+	public ResponseEntity<AdminDashboardResponse> adminDashboard() {
+		requireRole(Role.ADMIN);
+		return ResponseEntity.ok(analyticsService.getAdminDashboard());
+	}
+
 	@GetMapping("/staff/performance")
 	public ResponseEntity<StaffPerformanceResponse> staffPerformance() {
 		User staff = requireRole(Role.STAFF);

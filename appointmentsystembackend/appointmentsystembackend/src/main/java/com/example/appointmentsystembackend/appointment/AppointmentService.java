@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.appointmentsystembackend.notification.EmailService;
 import com.example.appointmentsystembackend.user.Role;
 import com.example.appointmentsystembackend.user.User;
 import com.example.appointmentsystembackend.user.UserRepository;
@@ -17,10 +18,13 @@ import com.example.appointmentsystembackend.user.UserRepository;
 public class AppointmentService {
 	private final AppointmentRepository appointmentRepository;
 	private final UserRepository userRepository;
+	private final EmailService emailService;
 
-	public AppointmentService(AppointmentRepository appointmentRepository, UserRepository userRepository) {
+	public AppointmentService(AppointmentRepository appointmentRepository, UserRepository userRepository,
+			EmailService emailService) {
 		this.appointmentRepository = appointmentRepository;
 		this.userRepository = userRepository;
+		this.emailService = emailService;
 	}
 
 	public List<AppointmentResponse> listForUser(User user) {
@@ -28,7 +32,7 @@ public class AppointmentService {
 		if (user.getRole() == Role.ADMIN) {
 			appointments = appointmentRepository.findAll();
 		} else if (user.getRole() == Role.STAFF) {
-			appointments = appointmentRepository.findByStaffId(user.getId());
+			appointments = appointmentRepository.findByStaffIdOrStaffIsNull(user.getId());
 		} else {
 			appointments = appointmentRepository.findByClientId(user.getId());
 		}
@@ -62,8 +66,11 @@ public class AppointmentService {
 			throw new IllegalArgumentException("Not allowed");
 		}
 
+		AppointmentStatus previousStatus = appointment.getStatus();
+		AppointmentStatus requestedStatus = null;
 		if (request.status() != null && !request.status().isBlank()) {
-			appointment.setStatus(AppointmentStatus.valueOf(request.status().toUpperCase()));
+			requestedStatus = AppointmentStatus.valueOf(request.status().toUpperCase());
+			appointment.setStatus(requestedStatus);
 		}
 		if (request.date() != null && !request.date().isBlank()) {
 			appointment.setDate(LocalDate.parse(request.date()));
@@ -81,6 +88,12 @@ public class AppointmentService {
 			User staff = userRepository.findById(UUID.fromString(request.staffId()))
 					.orElseThrow(() -> new IllegalArgumentException("Staff user not found"));
 			appointment.setStaff(staff);
+		}
+
+		if (requestedStatus != null && requestedStatus != previousStatus
+				&& (requestedStatus == AppointmentStatus.COMPLETED
+						|| requestedStatus == AppointmentStatus.CANCELLED)) {
+			emailService.sendAppointmentStatusEmail(appointment, requestedStatus);
 		}
 
 		return AppointmentResponse.from(appointment);

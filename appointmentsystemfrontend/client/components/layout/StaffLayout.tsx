@@ -38,9 +38,9 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="h-screen bg-gray-100 overflow-hidden">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <header className="bg-white border-b border-gray-200 fixed top-0 inset-x-0 z-50">
         <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4">
             <button
@@ -112,7 +112,7 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex pt-16 h-full">
         {/* Sidebar */}
         <aside
           className={`fixed left-0 top-16 h-[calc(100vh-64px)] ${
@@ -168,7 +168,7 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-0"}`}>
+        <main className={`flex-1 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-0"} h-[calc(100vh-64px)] overflow-y-auto`}>
           {children}
         </main>
       </div>

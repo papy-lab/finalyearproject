@@ -1,14 +1,96 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { GOOGLE_CLIENT_ID } from "@/lib/api";
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (options: {
+            client_id: string;
+            callback: (response: { credential?: string }) => void;
+          }) => void;
+          renderButton: (
+            element: HTMLElement,
+            options: {
+              theme?: "outline" | "filled_blue" | "filled_black";
+              size?: "large" | "medium" | "small";
+              width?: number;
+              text?: "signin_with" | "signup_with" | "continue_with" | "signin";
+            }
+          ) => void;
+        };
+      };
+    };
+  }
+}
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const handleMissingGoogleConfig = () => {
+    setError("Google sign-in is not configured yet. Add VITE_GOOGLE_CLIENT_ID in appointmentsystemfrontend/.env");
+  };
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID || !googleButtonRef.current) {
+      return;
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>("script[data-google-identity='true']");
+
+    const initializeGoogle = () => {
+      if (!window.google?.accounts?.id || !googleButtonRef.current) {
+        return;
+      }
+      googleButtonRef.current.innerHTML = "";
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async ({ credential }) => {
+          if (!credential) {
+            setError("Google login failed. Please try again.");
+            return;
+          }
+          const result = await loginWithGoogle(credential);
+          if (result.ok) {
+            navigate("/dashboard");
+          } else {
+            if ((result.error || "").toLowerCase().includes("staff/admin")) {
+              setError("Clients can sign in with Google or email/password.");
+            } else {
+              setError(result.error || "Google login failed");
+            }
+          }
+        },
+      });
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: "outline",
+        size: "large",
+        width: 360,
+        text: "continue_with",
+      });
+    };
+
+    if (existingScript) {
+      initializeGoogle();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleIdentity = "true";
+    script.onload = initializeGoogle;
+    document.body.appendChild(script);
+  }, [loginWithGoogle, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,9 +162,9 @@ export default function Login() {
                 <input type="checkbox" className="rounded border-gray-300" />
                 <span className="text-sm text-gray-600">Remember me</span>
               </label>
-              <a href="#" className="text-sm text-rra-blue hover:text-rra-navy transition">
+              <Link to="/forgot-password" className="text-sm text-rra-blue hover:text-rra-navy transition">
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             <button
@@ -92,6 +174,24 @@ export default function Login() {
               <LogIn className="h-5 w-5" />
               Sign In
             </button>
+
+            <div className="pt-2 flex justify-center">
+              {GOOGLE_CLIENT_ID ? (
+                <div ref={googleButtonRef} />
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleMissingGoogleConfig}
+                  className="w-full max-w-[360px] rounded-lg border border-gray-300 bg-white py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                  aria-label="Sign in with Google (Clients only)"
+                >
+                  Sign in with Google (Clients only)
+                </button>
+              )}
+            </div>
+            <p className="text-center text-xs text-gray-500">
+              Clients can sign in with Google or email/password.
+            </p>
           </form>
 
           {/* Sign Up Link */}

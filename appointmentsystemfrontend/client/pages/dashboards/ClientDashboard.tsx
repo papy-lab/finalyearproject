@@ -37,7 +37,7 @@ interface Appointment {
   date: string;
   time: string;
   title: string;
-  status: "Confirmed" | "Pending" | "Cancelled";
+  status: "Confirmed" | "Pending" | "Completed" | "Cancelled";
   officeName: string;
 }
 
@@ -251,6 +251,8 @@ export default function ClientDashboard() {
     switch (status.toLowerCase()) {
       case "confirmed":
         return "Confirmed";
+      case "completed":
+        return "Completed";
       case "cancelled":
         return "Cancelled";
       default:
@@ -329,6 +331,8 @@ export default function ClientDashboard() {
                         <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
                           apt.status === 'Confirmed'
                             ? 'bg-green-100 text-rra-green'
+                            : apt.status === 'Completed'
+                            ? 'bg-blue-100 text-rra-blue'
                             : apt.status === 'Pending'
                             ? 'bg-yellow-100 text-orange-600'
                             : 'bg-red-100 text-red-600'

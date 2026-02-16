@@ -4,22 +4,39 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ClientLayout from "@/components/layout/ClientLayout";
 import { api, AppointmentResponse } from "@/lib/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ClientAppointments() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-
 
   const [appointments, setAppointments] = useState<Array<{
     id: string;
     date: string;
     time: string;
+    rawDate: string;
+    rawTime: string;
     title: string;
     status: string;
     office: string;
     officer?: string;
   }>>([]);
+
+  const [selectedAppointment, setSelectedAppointment] = useState<(typeof appointments)[number] | null>(null);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [newDate, setNewDate] = useState("");
+  const [newTime, setNewTime] = useState("");
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -31,6 +48,21 @@ export default function ClientAppointments() {
     return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   };
 
+  const mapStatus = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "confirmed":
+        return "Confirmed";
+      case "scheduled":
+        return "Scheduled";
+      case "completed":
+        return "Completed";
+      case "cancelled":
+        return "Cancelled";
+      default:
+        return "Pending";
+    }
+  };
+
   useEffect(() => {
     const loadAppointments = async () => {
       try {
@@ -40,8 +72,10 @@ export default function ClientAppointments() {
             id: apt.id,
             date: formatDate(apt.date),
             time: formatTime(apt.time),
+            rawDate: apt.date,
+            rawTime: apt.time,
             title: apt.appointmentType,
-            status: apt.status.charAt(0).toUpperCase() + apt.status.slice(1),
+            status: mapStatus(apt.status),
             office: apt.location,
             officer: apt.staffName ?? "TBD",
           }))
@@ -52,6 +86,87 @@ export default function ClientAppointments() {
     };
     loadAppointments();
   }, []);
+
+  const openReschedule = (apt: (typeof appointments)[number]) => {
+    setSelectedAppointment(apt);
+    setNewDate(apt.rawDate);
+    setNewTime(apt.rawTime);
+    setRescheduleOpen(true);
+  };
+
+  const openCancel = (apt: (typeof appointments)[number]) => {
+    setSelectedAppointment(apt);
+    setCancelOpen(true);
+  };
+
+  const handleRescheduleSubmit = async () => {
+    if (!selectedAppointment) {
+      return;
+    }
+    if (!newDate || !newTime) {
+      toast({
+        title: "Error",
+        description: "Please select both date and time",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await api.updateAppointment(selectedAppointment.id, {
+        date: newDate,
+        time: newTime,
+        status: "pending",
+      });
+      setAppointments((prev) =>
+        prev.map((apt) =>
+          apt.id === selectedAppointment.id
+            ? {
+                ...apt,
+                rawDate: newDate,
+                rawTime: newTime,
+                date: formatDate(newDate),
+                time: formatTime(newTime),
+                status: "Pending",
+              }
+            : apt
+        )
+      );
+      toast({
+        title: "Success",
+        description: `Appointment rescheduled to ${newDate} at ${newTime}`,
+      });
+      setRescheduleOpen(false);
+      setSelectedAppointment(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to reschedule appointment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelAppointment = async () => {
+    if (!selectedAppointment) {
+      return;
+    }
+    try {
+      await api.updateAppointment(selectedAppointment.id, { status: "cancelled" });
+      setAppointments((prev) => prev.filter((apt) => apt.id !== selectedAppointment.id));
+      toast({
+        title: "Success",
+        description: `${selectedAppointment.title} appointment has been cancelled`,
+      });
+      setCancelOpen(false);
+      setSelectedAppointment(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to cancel appointment",
+        variant: "destructive",
+      });
+    }
+  };
 
   const filteredAppointments = appointments.filter(apt => {
     const matchesSearch = apt.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -211,10 +326,20 @@ export default function ClientAppointments() {
                             {apt.status}
                           </span>
                           <div className="flex gap-2">
-                            <button className="p-2 text-gray-600 hover:bg-gray-200 rounded-lg transition" title="Edit">
+                            <button
+                              onClick={() => openReschedule(apt)}
+                              disabled={apt.status === "Cancelled" || apt.status === "Completed"}
+                              className="p-2 text-gray-600 hover:bg-gray-200 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Reschedule"
+                            >
                               <Edit2 className="h-4 w-4" />
                             </button>
-                            <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition" title="Cancel">
+                            <button
+                              onClick={() => openCancel(apt)}
+                              disabled={apt.status === "Cancelled" || apt.status === "Completed"}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Cancel"
+                            >
                               <X className="h-4 w-4" />
                             </button>
                           </div>
@@ -255,6 +380,90 @@ export default function ClientAppointments() {
             </div>
         </div>
       </div>
+
+      <Dialog open={rescheduleOpen} onOpenChange={setRescheduleOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Reschedule Appointment</DialogTitle>
+            <DialogDescription>
+              {selectedAppointment && `Rescheduling: ${selectedAppointment.title}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-gray-700">New Date</label>
+              <input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium text-gray-700">New Time</label>
+              <input
+                type="time"
+                value={newTime}
+                onChange={(e) => setNewTime(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="text-sm text-gray-600 p-3 bg-blue-50 rounded-lg">
+              <p className="font-medium mb-1">Current Details:</p>
+              <p>{selectedAppointment?.date} at {selectedAppointment?.time}</p>
+              <p>{selectedAppointment?.office}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setRescheduleOpen(false)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleRescheduleSubmit}
+              className="px-4 py-2 bg-rra-blue text-white rounded-lg font-medium hover:bg-rra-navy transition"
+            >
+              Reschedule
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <X className="h-5 w-5 text-red-600" />
+              Cancel Appointment
+            </DialogTitle>
+            <DialogDescription>
+              {selectedAppointment && `Are you sure you want to cancel: ${selectedAppointment.title}?`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-sm text-gray-600 p-3 bg-red-50 rounded-lg">
+            <p className="font-medium mb-1">Appointment Details:</p>
+            <p>{selectedAppointment?.date} at {selectedAppointment?.time}</p>
+            <p>{selectedAppointment?.office}</p>
+            <p className="mt-2 text-red-700">This action cannot be undone.</p>
+          </div>
+          <DialogFooter>
+            <button
+              onClick={() => setCancelOpen(false)}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+            >
+              Keep Appointment
+            </button>
+            <button
+              onClick={handleCancelAppointment}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition"
+            >
+              Cancel Appointment
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </ClientLayout>
   );
 }

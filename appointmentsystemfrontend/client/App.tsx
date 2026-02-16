@@ -9,6 +9,8 @@ import { AuthProvider } from "@/context/AuthContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Appointments from "./pages/Appointments";
 import Schedule from "./pages/Schedule";
@@ -18,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import AdminAppointments from "./pages/dashboards/AdminAppointments";
 import AdminStaffManagement from "./pages/dashboards/AdminStaffManagement";
+import AdminClients from "./pages/dashboards/AdminClients";
 import AdminReports from "./pages/dashboards/AdminReports";
 import AdminSettings from "./pages/dashboards/AdminSettings";
 import StaffDashboard from "./pages/dashboards/StaffDashboard";
@@ -40,6 +43,8 @@ export default function App() {
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/appointments" element={<Appointments />} />
               <Route path="/schedule" element={<Schedule />} />
@@ -48,6 +53,7 @@ export default function App() {
               <Route path="/admin-dashboard" element={<AdminDashboard />} />
               <Route path="/admin-appointments" element={<AdminAppointments />} />
               <Route path="/admin-staff" element={<AdminStaffManagement />} />
+              <Route path="/admin-clients" element={<AdminClients />} />
               <Route path="/admin-reports" element={<AdminReports />} />
               <Route path="/admin-settings" element={<AdminSettings />} />
               <Route path="/staff-dashboard" element={<StaffDashboard />} />

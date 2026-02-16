@@ -1,7 +1,6 @@
 import { Plus, Search, Filter, Edit2, Trash2, CheckCircle2, AlertCircle, Mail, Phone, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { api, StaffResponse } from "@/lib/api";
 
 interface StaffMember {
@@ -24,6 +23,10 @@ export default function AdminStaffManagement() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [addLoading, setAddLoading] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -31,6 +34,15 @@ export default function AdminStaffManagement() {
     department: "Tax Services",
     position: "",
     password: ""
+  });
+  const [editFormData, setEditFormData] = useState({
+    id: "",
+    name: "",
+    email: "",
+    phone: "",
+    department: "Tax Services",
+    position: "",
+    status: "active" as StaffMember["status"],
   });
 
   const departments = Array.from(new Set(staff.map(s => s.department))).filter(Boolean);
@@ -48,6 +60,49 @@ export default function AdminStaffManagement() {
 
   const handleDeleteStaff = (id: string) => {
     setStaff(prev => prev.filter(s => s.id !== id));
+  };
+
+  const openEditModal = (member: StaffMember) => {
+    setEditError(null);
+    setEditFormData({
+      id: member.id,
+      name: member.name,
+      email: member.email,
+      phone: member.phone,
+      department: member.department,
+      position: member.position,
+      status: member.status,
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleEditStaff = () => {
+    if (!editFormData.name || !editFormData.email || !editFormData.phone || !editFormData.position) {
+      setEditError("Please fill in all fields.");
+      return;
+    }
+    setStaff(prev =>
+      prev.map((s) =>
+        s.id === editFormData.id
+          ? {
+              ...s,
+              name: editFormData.name,
+              email: editFormData.email,
+              phone: editFormData.phone,
+              department: editFormData.department,
+              position: editFormData.position,
+              status: editFormData.status,
+            }
+          : s
+      )
+    );
+    setEditModalOpen(false);
+    setSelectedStaff(null);
+  };
+
+  const openDeleteModal = (member: StaffMember) => {
+    setSelectedStaff(member);
+    setDeleteModalOpen(true);
   };
 
   const handleAddStaff = async () => {
@@ -197,7 +252,61 @@ export default function AdminStaffManagement() {
 
           {/* Staff Table */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="md:hidden p-4 space-y-4">
+              {filteredStaff.map((member) => (
+                <div key={member.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-semibold text-gray-900">{member.name}</p>
+                      <p className="text-sm text-gray-500">Since {new Date(member.joinDate).toLocaleDateString()}</p>
+                    </div>
+                    <button
+                      onClick={() => handleToggleStatus(member.id)}
+                      className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition ${
+                        member.status === "active"
+                          ? "bg-green-100 text-rra-green hover:bg-green-200"
+                          : "bg-red-100 text-red-600 hover:bg-red-200"
+                      }`}
+                    >
+                      {member.status === "active" ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4" />
+                      )}
+                      {member.status === "active" ? "Active" : "Inactive"}
+                    </button>
+                  </div>
+                  <div className="mt-3 space-y-2 text-sm text-gray-600">
+                    <p className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      {member.email}
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      {member.phone}
+                    </p>
+                    <p><span className="font-medium text-gray-700">Department:</span> {member.department}</p>
+                    <p><span className="font-medium text-gray-700">Position:</span> {member.position}</p>
+                    <p><span className="font-medium text-gray-700">Appointments:</span> {member.appointmentsHandled}</p>
+                  </div>
+                  <div className="mt-4 flex items-center gap-2">
+                    <button
+                      onClick={() => openEditModal(member)}
+                      className="flex-1 p-2 text-rra-blue border border-blue-200 hover:bg-blue-50 rounded-lg transition text-sm font-medium"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => openDeleteModal(member)}
+                      className="flex-1 p-2 text-red-600 border border-red-200 hover:bg-red-50 rounded-lg transition text-sm font-medium"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
@@ -206,7 +315,7 @@ export default function AdminStaffManagement() {
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Department</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Position</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Appointments</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Status</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 min-w-[130px]">Status</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Actions</th>
                   </tr>
                 </thead>
@@ -235,10 +344,10 @@ export default function AdminStaffManagement() {
                           <p className="text-xs text-gray-500">handled</p>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => handleToggleStatus(member.id)}
-                          className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold transition ${
+                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition ${
                             member.status === "active"
                               ? "bg-green-100 text-rra-green hover:bg-green-200"
                               : "bg-red-100 text-red-600 hover:bg-red-200"
@@ -255,13 +364,14 @@ export default function AdminStaffManagement() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button
+                            onClick={() => openEditModal(member)}
                             className="p-2 text-rra-blue hover:bg-blue-100 rounded-lg transition"
                             title="Edit"
                           >
                             <Edit2 className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteStaff(member.id)}
+                            onClick={() => openDeleteModal(member)}
                             className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition"
                             title="Delete"
                           >
@@ -280,6 +390,143 @@ export default function AdminStaffManagement() {
               </div>
             )}
           </div>
+
+          {/* Edit Staff Modal */}
+          {editModalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                  <h2 className="text-xl font-semibold text-rra-navy">Edit Staff Member</h2>
+                  <button
+                    onClick={() => setEditModalOpen(false)}
+                    className="p-1 hover:bg-gray-100 rounded-lg transition"
+                  >
+                    <X className="h-5 w-5 text-gray-600" />
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  {editError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                      {editError}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Full Name</label>
+                      <input
+                        type="text"
+                        value={editFormData.name}
+                        onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Email</label>
+                      <input
+                        type="email"
+                        value={editFormData.email}
+                        onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Phone</label>
+                      <input
+                        type="tel"
+                        value={editFormData.phone}
+                        onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Department</label>
+                      <select
+                        value={editFormData.department}
+                        onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
+                      >
+                        {departmentOptions.map((dept) => (
+                          <option key={dept} value={dept}>{dept}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Position</label>
+                      <input
+                        type="text"
+                        value={editFormData.position}
+                        onChange={(e) => setEditFormData({ ...editFormData, position: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Status</label>
+                      <select
+                        value={editFormData.status}
+                        onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value as StaffMember["status"] })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 p-6 border-t border-gray-200">
+                  <button
+                    onClick={() => setEditModalOpen(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleEditStaff}
+                    className="flex-1 px-4 py-2 bg-rra-blue text-white rounded-lg hover:opacity-90 transition font-medium"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Staff Modal */}
+          {deleteModalOpen && selectedStaff && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div className="p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-2">Delete Staff Member</h2>
+                  <p className="text-gray-600 mb-6">
+                    Are you sure you want to delete <span className="font-medium text-gray-900">{selectedStaff.name}</span>?
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setDeleteModalOpen(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDeleteStaff(selectedStaff.id);
+                        setDeleteModalOpen(false);
+                        setSelectedStaff(null);
+                      }}
+                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Add Staff Modal */}
           {addModalOpen && (

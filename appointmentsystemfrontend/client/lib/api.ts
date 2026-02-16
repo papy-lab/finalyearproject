@@ -1,4 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 export type ApiUserRole = "client" | "staff" | "admin";
 
@@ -55,6 +56,16 @@ export interface StaffResponse {
   appointmentsHandled: number;
 }
 
+export interface ClientResponse {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string | null;
+  active: boolean;
+  createdAt: string;
+  appointments: number;
+}
+
 export interface SystemSettingsResponse {
   systemName: string;
   supportEmail: string;
@@ -83,6 +94,18 @@ export interface AdminReportsResponse {
   weeklyTrend: Array<{ day: string; value: number }>;
   departmentBreakdown: Array<{ name: string; count: number }>;
   systemHealth: Array<{ label: string; value: number; status: string }>;
+}
+
+export interface AdminDashboardResponse {
+  metrics: {
+    totalAppointments: number;
+    activeStaff: number;
+    avgWaitMinutes: number;
+    completionRate: number;
+  };
+  weeklyTrend: Array<{ day: string; value: number }>;
+  systemStatus: Array<{ name: string; status: string; level: "good" | "warn" | "bad" }>;
+  recentActivity: Array<{ event: string; user: string; timeAgo: string }>;
 }
 
 export interface StaffPerformanceResponse {
@@ -151,15 +174,25 @@ export interface ApiError {
   error?: string;
 }
 
+export interface MessageResponse {
+  message: string;
+}
+
 const getAuthToken = () => localStorage.getItem("rra_token");
 
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAuthToken();
+  const isPublicAuthPath =
+    path === "/api/auth/login" ||
+    path === "/api/auth/register" ||
+    path === "/api/auth/google" ||
+    path === "/api/auth/forgot-password" ||
+    path === "/api/auth/reset-password";
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string> | undefined),
   };
-  if (token) {
+  if (token && !isPublicAuthPath) {
     headers.Authorization = `Bearer ${token}`;
   }
 
@@ -186,10 +219,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
+  googleLogin: (idToken: string) =>
+    apiFetch<AuthResponse>("/api/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ idToken }),
+    }),
   register: (payload: {
     email: string;
     fullName: string;
-    role: ApiUserRole;
     department?: string;
     phone?: string;
     password: string;
@@ -198,10 +235,20 @@ export const api = {
       method: "POST",
       body: JSON.stringify({
         ...payload,
-        role: payload.role.toUpperCase(),
+        role: "CLIENT",
       }),
     }),
   me: () => apiFetch<UserProfile>("/api/auth/me"),
+  forgotPassword: (email: string) =>
+    apiFetch<MessageResponse>("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (email: string, code: string, newPassword: string) =>
+    apiFetch<MessageResponse>("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ email, code, newPassword }),
+    }),
 
   listAppointments: () => apiFetch<AppointmentResponse[]>("/api/appointments"),
   createAppointment: (payload: {
@@ -250,6 +297,13 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  listClients: () => apiFetch<ClientResponse[]>("/api/clients"),
+  updateClientStatus: (id: string, active: boolean) =>
+    apiFetch<ClientResponse>(`/api/clients/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ active }),
+    }),
+
   getSettings: () => apiFetch<SystemSettingsResponse>("/api/settings"),
   updateSettings: (payload: Omit<SystemSettingsResponse, "updatedAt">) =>
     apiFetch<SystemSettingsResponse>("/api/settings", {
@@ -259,6 +313,7 @@ export const api = {
 
   getAdminReports: (range: string, department: string) =>
     apiFetch<AdminReportsResponse>(`/api/analytics/admin/reports?range=${range}&department=${department}`),
+  getAdminDashboard: () => apiFetch<AdminDashboardResponse>("/api/analytics/admin/dashboard"),
   getStaffPerformance: () => apiFetch<StaffPerformanceResponse>("/api/analytics/staff/performance"),
   getClientHistory: (year: number) =>
     apiFetch<ClientHistoryResponse>(`/api/analytics/client/history?year=${year}`),

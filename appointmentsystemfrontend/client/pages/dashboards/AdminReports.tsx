@@ -77,6 +77,7 @@ export default function AdminReports() {
                   onChange={(e) => setDateRange(e.target.value)}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
                 >
+                  <option value="all">All Time</option>
                   <option value="week">This Week</option>
                   <option value="month">This Month</option>
                   <option value="quarter">This Quarter</option>

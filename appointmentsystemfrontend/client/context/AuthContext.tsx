@@ -50,8 +50,9 @@ interface AuthContextType {
   isReady: boolean;
   userRole: UserRole | null;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  loginWithGoogle: (idToken: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
-  signup: (email: string, password: string, fullName: string, role: UserRole) => Promise<{ ok: boolean; error?: string }>;
+  signup: (email: string, password: string, fullName: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -87,6 +88,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const loginWithGoogle = async (idToken: string): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      const response = await api.googleLogin(idToken);
+      applyAuth(response);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "Google login failed" };
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem("rra_user");
@@ -96,11 +107,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signup = async (
     email: string,
     password: string,
-    fullName: string,
-    role: UserRole
+    fullName: string
   ): Promise<{ ok: boolean; error?: string }> => {
     try {
-      const response = await api.register({ email, password, fullName, role });
+      const response = await api.register({ email, password, fullName });
       applyAuth(response);
       return { ok: true };
     } catch (error) {
@@ -140,6 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isReady: initialized,
     userRole: user?.role || null,
     login,
+    loginWithGoogle,
     logout,
     signup,
   };

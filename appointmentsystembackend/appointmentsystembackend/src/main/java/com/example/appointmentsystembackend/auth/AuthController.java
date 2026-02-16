@@ -1,5 +1,7 @@
 package com.example.appointmentsystembackend.auth;
 
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -33,6 +35,21 @@ public class AuthController {
 	@PostMapping("/login")
 	public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
 		return ResponseEntity.ok(authService.login(request));
+	}
+
+	@PostMapping("/google")
+	public ResponseEntity<AuthResponse> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+		return ResponseEntity.ok(authService.loginWithGoogle(request));
+	}
+
+	@PostMapping("/forgot-password")
+	public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+		return ResponseEntity.ok(authService.forgotPassword(request));
+	}
+
+	@PostMapping("/reset-password")
+	public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+		return ResponseEntity.ok(authService.resetPassword(request));
 	}
 
 	@GetMapping("/me")

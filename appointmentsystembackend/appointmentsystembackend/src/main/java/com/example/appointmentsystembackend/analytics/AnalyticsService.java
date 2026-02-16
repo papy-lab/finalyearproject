@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -50,6 +51,7 @@ public class AnalyticsService {
 
 	public AdminReportsResponse getAdminReports(String range, String department) {
 		LocalDate today = LocalDate.now();
+		boolean allTime = "all".equalsIgnoreCase(range);
 		LocalDate startDate = switch (range) {
 			case "week" -> today.minusDays(7);
 			case "quarter" -> today.minusDays(90);
@@ -58,7 +60,7 @@ public class AnalyticsService {
 		};
 
 		List<Appointment> appointments = appointmentRepository.findAll().stream()
-				.filter(apt -> !apt.getDate().isBefore(startDate) && !apt.getDate().isAfter(today))
+				.filter(apt -> allTime || (!apt.getDate().isBefore(startDate) && !apt.getDate().isAfter(today)))
 				.filter(apt -> {
 					if ("all".equalsIgnoreCase(department)) {
 						return true;
@@ -159,6 +161,66 @@ public class AnalyticsService {
 				weeklyTrend,
 				departmentBreakdown,
 				health);
+	}
+
+	public AdminDashboardResponse getAdminDashboard() {
+		LocalDate today = LocalDate.now();
+		LocalDate startDate = today.minusDays(7);
+
+		List<Appointment> allAppointments = appointmentRepository.findAll();
+		List<Appointment> recentAppointments = allAppointments.stream()
+				.filter(apt -> !apt.getDate().isBefore(startDate) && !apt.getDate().isAfter(today))
+				.toList();
+
+		long totalAppointments = allAppointments.size();
+		long completed = allAppointments.stream().filter(apt -> apt.getStatus() == AppointmentStatus.COMPLETED).count();
+		double completionRate = totalAppointments == 0 ? 0 : (completed * 100.0 / totalAppointments);
+
+		double avgWaitMinutes = allAppointments.stream()
+				.mapToDouble(apt -> {
+					LocalDateTime appointmentTime = apt.getDate().atTime(apt.getTime());
+					long minutes = java.time.Duration.between(apt.getCreatedAt().toLocalDateTime(), appointmentTime).toMinutes();
+					return Math.max(minutes, 0);
+				})
+				.average()
+				.orElse(0);
+
+		long activeStaff = userRepository.findAll().stream()
+				.filter(user -> user.getRole() == Role.STAFF)
+				.filter(User::isActive)
+				.count();
+
+		Map<DayOfWeek, Long> weekdayCounts = recentAppointments.stream()
+				.collect(Collectors.groupingBy(apt -> apt.getDate().getDayOfWeek(), Collectors.counting()));
+		List<AdminDashboardResponse.DayCount> weeklyTrend = List.of(
+				DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY,
+				DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY).stream()
+				.map(day -> new AdminDashboardResponse.DayCount(
+						day.getDisplayName(TextStyle.SHORT, Locale.ENGLISH),
+						weekdayCounts.getOrDefault(day, 0L)))
+				.toList();
+
+		List<AdminDashboardResponse.SystemStatus> systemStatus = List.of(
+				new AdminDashboardResponse.SystemStatus("Database", "Operational", "good"),
+				new AdminDashboardResponse.SystemStatus("Email Service", "Active", "good"),
+				new AdminDashboardResponse.SystemStatus("Backups", "Pending", "warn"));
+
+		List<AdminDashboardResponse.ActivityItem> recentActivity = appointmentRepository.findAll().stream()
+				.sorted(Comparator.comparing(Appointment::getCreatedAt).reversed())
+				.limit(4)
+				.map(apt -> new AdminDashboardResponse.ActivityItem(
+						"New appointment booked",
+						apt.getClient() != null ? apt.getClient().getFullName() : "Client",
+						formatTimeAgo(apt.getCreatedAt().toLocalDateTime())))
+				.filter(item -> Objects.nonNull(item.user()))
+				.toList();
+
+		return new AdminDashboardResponse(
+				new AdminDashboardResponse.Metrics(totalAppointments, activeStaff,
+						roundOneDecimal(avgWaitMinutes), roundOneDecimal(completionRate)),
+				weeklyTrend,
+				systemStatus,
+				recentActivity);
 	}
 
 	public StaffPerformanceResponse getStaffPerformance(User staff) {
@@ -414,6 +476,23 @@ public class AnalyticsService {
 
 	private double roundOneDecimal(double value) {
 		return Math.round(value * 10.0) / 10.0;
+	}
+
+	private String formatTimeAgo(LocalDateTime time) {
+		LocalDateTime now = LocalDateTime.now();
+		long minutes = java.time.Duration.between(time, now).toMinutes();
+		if (minutes < 1) {
+			return "just now";
+		}
+		if (minutes < 60) {
+			return minutes + " mins ago";
+		}
+		long hours = minutes / 60;
+		if (hours < 24) {
+			return hours + " hours ago";
+		}
+		long days = hours / 24;
+		return days + " days ago";
 	}
 
 }
