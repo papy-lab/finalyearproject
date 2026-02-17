@@ -1,4 +1,4 @@
-import { Search, Filter, MoreVertical } from "lucide-react";
+import { Search, Filter, CheckCircle2, Ban, Clock3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import StaffLayout from "@/components/layout/StaffLayout";
 import { api, AppointmentResponse } from "@/lib/api";
@@ -16,6 +16,7 @@ interface Appointment {
 
 export default function StaffAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -75,6 +76,18 @@ export default function StaffAppointments() {
     }
   };
 
+  const handleUpdateStatus = async (id: string, status: "confirmed" | "completed" | "cancelled") => {
+    try {
+      setUpdatingId(id);
+      await api.updateAppointment(id, { status });
+      setAppointments((prev) =>
+        prev.map((apt) => (apt.id === id ? { ...apt, status } : apt))
+      );
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   return (
     <StaffLayout>
       <div className="p-4 sm:p-8">
@@ -128,7 +141,6 @@ export default function StaffAppointments() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">ID</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Client</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Department</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Service</th>
@@ -140,7 +152,6 @@ export default function StaffAppointments() {
                 <tbody>
                   {filteredAppointments.map((apt) => (
                     <tr key={apt.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm font-mono text-gray-600">{apt.id}</td>
                       <td className="px-6 py-4">
                         <div>
                           <p className="text-sm font-medium text-gray-900">{apt.clientName}</p>
@@ -154,14 +165,48 @@ export default function StaffAppointments() {
                         <p className="text-xs text-gray-500">{apt.time}</p>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`text-xs font-semibold px-3 py-1 rounded-full ${getStatusColor(apt.status)} capitalize`}>
+                        <span
+                          className={`inline-flex items-center justify-center whitespace-nowrap min-w-[96px] text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${getStatusColor(apt.status)} capitalize`}
+                        >
                           {apt.status}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <button className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100">
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {apt.status === "pending" && (
+                            <button
+                              onClick={() => handleUpdateStatus(apt.id, "confirmed")}
+                              disabled={updatingId === apt.id}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-60"
+                              title="Confirm appointment"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Confirm
+                            </button>
+                          )}
+                          {apt.status !== "completed" && apt.status !== "cancelled" && (
+                            <button
+                              onClick={() => handleUpdateStatus(apt.id, "completed")}
+                              disabled={updatingId === apt.id}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 disabled:opacity-60"
+                              title="Mark completed"
+                            >
+                              <Clock3 className="h-3.5 w-3.5" />
+                              Complete
+                            </button>
+                          )}
+                          {apt.status !== "cancelled" && (
+                            <button
+                              onClick={() => handleUpdateStatus(apt.id, "cancelled")}
+                              disabled={updatingId === apt.id}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-60"
+                              title="Cancel appointment"
+                            >
+                              <Ban className="h-3.5 w-3.5" />
+                              Cancel
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

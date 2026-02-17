@@ -1,18 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
 import { MapPin, ArrowLeft, Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import ClientLayout from "@/components/layout/ClientLayout";
-import { api } from "@/lib/api";
-
-const APPOINTMENT_TYPES = [
-  { id: "tax-consultation", label: "Tax Consultation", description: "Get expert advice on tax matters" },
-  { id: "license-renewal", label: "License Renewal", description: "Renew your business license" },
-  { id: "compliance-review", label: "Compliance Review", description: "Review compliance status" },
-  { id: "annual-filing", label: "Annual Filing", description: "Submit your annual filing" },
-  { id: "document-submission", label: "Document Submission", description: "Submit required documents" },
-  { id: "audit-meeting", label: "Audit Meeting", description: "Discuss audit matters" }
-];
+import { api, ServiceCatalogResponse } from "@/lib/api";
 
 const OFFICE_LOCATIONS = [
   { id: "kicukiro", name: "Kicukiro Office", address: "Kicukiro, Kigali" },
@@ -33,12 +24,31 @@ export default function Schedule() {
   const [step, setStep] = useState(1);
 
   // Form state
-  const [appointmentType, setAppointmentType] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedOffice, setSelectedOffice] = useState("");
   const [notes, setNotes] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [services, setServices] = useState<ServiceCatalogResponse[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(true);
+
+  const WORK_START = "08:00";
+  const WORK_END = "17:00";
+
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        const data = await api.listServices();
+        setServices(data.filter((service) => service.active));
+      } catch {
+        setServices([]);
+      } finally {
+        setServicesLoading(false);
+      }
+    };
+    loadServices();
+  }, []);
 
   const getTodayDate = () => {
     const today = new Date();
@@ -51,14 +61,43 @@ export default function Schedule() {
     return tomorrow.toISOString().split('T')[0];
   };
 
+  const isWeekendDate = (dateValue: string) => {
+    if (!dateValue) {
+      return false;
+    }
+    const day = new Date(dateValue).getDay();
+    return day === 0 || day === 6;
+  };
+
+  const isWithinWorkingHours = (time12h: string) => {
+    if (!time12h) {
+      return false;
+    }
+    const time24h = to24HourTime(time12h);
+    return time24h >= WORK_START && time24h <= WORK_END;
+  };
+
+  const getStep2ValidationError = () => {
+    if (!selectedDate || !selectedTime) {
+      return "Date and time are required.";
+    }
+    if (isWeekendDate(selectedDate)) {
+      return "This date is on weekend (Saturday/Sunday). Please choose a working day.";
+    }
+    if (!isWithinWorkingHours(selectedTime)) {
+      return "Please choose a time within working hours (08:00 - 17:00).";
+    }
+    return "";
+  };
+
   const isStepValid = () => {
     switch(step) {
       case 1:
-        return appointmentType;
+        return Boolean(selectedServiceId);
       case 2:
-        return selectedDate && selectedTime;
+        return !getStep2ValidationError();
       case 3:
-        return selectedOffice;
+        return Boolean(selectedOffice);
       case 4:
         return true;
       default:
@@ -70,9 +109,10 @@ export default function Schedule() {
     if (isStepValid()) {
       setStep(step + 1);
     } else {
+      const step2Error = step === 2 ? getStep2ValidationError() : "";
       toast({
         title: "Please complete this step",
-        description: "All fields are required to proceed",
+        description: step2Error || "All fields are required to proceed",
         variant: "destructive",
       });
     }
@@ -85,10 +125,19 @@ export default function Schedule() {
   };
 
   const handleSubmit = () => {
-    if (!appointmentType || !selectedDate || !selectedTime || !selectedOffice) {
+    if (!selectedServiceId || !selectedDate || !selectedTime || !selectedOffice) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    const step2Error = getStep2ValidationError();
+    if (step2Error) {
+      toast({
+        title: "Invalid date/time",
+        description: step2Error,
         variant: "destructive",
       });
       return;
@@ -97,7 +146,7 @@ export default function Schedule() {
     const submitAppointment = async () => {
       try {
         await api.createAppointment({
-          appointmentType: getAppointmentTypeLabel(),
+          serviceId: selectedServiceId,
           date: selectedDate,
           time: to24HourTime(selectedTime),
           location: getOfficeLabel(),
@@ -124,7 +173,7 @@ export default function Schedule() {
   };
 
   const getAppointmentTypeLabel = () => {
-    return APPOINTMENT_TYPES.find(t => t.id === appointmentType)?.label || "";
+    return services.find((service) => service.id === selectedServiceId)?.name || "";
   };
 
   const getOfficeLabel = () => {
@@ -208,22 +257,31 @@ export default function Schedule() {
             {step === 1 && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
                 <h3 className="text-xl font-semibold text-rra-navy mb-6">What type of appointment do you need?</h3>
+                {servicesLoading ? (
+                  <p className="text-gray-600">Loading services...</p>
+                ) : services.length === 0 ? (
+                  <p className="text-red-600">No services are available right now. Please contact support.</p>
+                ) : (
                 <div className="grid md:grid-cols-2 gap-4">
-                  {APPOINTMENT_TYPES.map((type) => (
+                  {services.map((service) => (
                     <button
-                      key={type.id}
-                      onClick={() => setAppointmentType(type.id)}
+                      key={service.id}
+                      onClick={() => setSelectedServiceId(service.id)}
                       className={`p-4 rounded-lg border-2 text-left transition ${
-                        appointmentType === type.id
+                        selectedServiceId === service.id
                           ? "border-rra-blue bg-blue-50"
                           : "border-gray-200 hover:border-rra-blue"
                       }`}
                     >
-                      <p className="font-semibold text-rra-navy">{type.label}</p>
-                      <p className="text-sm text-gray-600 mt-1">{type.description}</p>
+                      <p className="font-semibold text-rra-navy">{service.name}</p>
+                      <p className="text-sm text-gray-600 mt-1">{service.description || "No description provided."}</p>
+                      {service.requirements && (
+                        <p className="text-xs text-gray-500 mt-2">Requirements: {service.requirements}</p>
+                      )}
                     </button>
                   ))}
                 </div>
+                )}
               </div>
             )}
 
@@ -239,9 +297,16 @@ export default function Schedule() {
                       min={getMinDate()}
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none ${
+                        selectedDate && isWeekendDate(selectedDate) ? "border-red-400 bg-red-50" : "border-gray-300"
+                      }`}
                     />
-                    <p className="text-xs text-gray-500 mt-1">Please select a date at least 1 day in advance</p>
+                    <p className="text-xs text-gray-500 mt-1">Please select a date at least 1 day in advance (Monday-Friday only)</p>
+                    {selectedDate && isWeekendDate(selectedDate) && (
+                      <p className="text-xs text-red-600 mt-1">
+                        This date is on weekend. Please choose a working day.
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -261,6 +326,11 @@ export default function Schedule() {
                         </button>
                       ))}
                     </div>
+                    {selectedTime && !isWithinWorkingHours(selectedTime) && (
+                      <p className="text-xs text-red-600 mt-2">
+                        Selected time is outside working hours. Choose between 08:00 and 17:00.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

@@ -11,15 +11,27 @@ export default function AdminClients() {
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [updatingClientId, setUpdatingClientId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadClients = async () => {
       try {
         const data = await api.listClients();
-        setClients(data);
+        const normalized = Array.isArray(data)
+          ? data
+          : Array.isArray((data as { value?: ClientResponse[] }).value)
+          ? (data as { value: ClientResponse[] }).value
+          : [];
+        setClients(normalized);
         setError("");
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load clients");
+        const message =
+          err instanceof Error && err.message.includes("403")
+            ? "Access denied. Please login as admin to view clients."
+            : err instanceof Error
+            ? err.message
+            : "Failed to load clients";
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -44,10 +56,20 @@ export default function AdminClients() {
   const handleToggleStatus = async (client: ClientResponse) => {
     const nextActive = !client.active;
     try {
+      setUpdatingClientId(client.id);
+      setError("");
       const updated = await api.updateClientStatus(client.id, nextActive);
       setClients((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update status");
+      const message =
+        err instanceof Error && err.message.includes("403")
+          ? "Access denied. Please login as admin to update client status."
+          : err instanceof Error
+          ? err.message
+          : "Failed to update status";
+      setError(message);
+    } finally {
+      setUpdatingClientId(null);
     }
   };
 
@@ -144,11 +166,11 @@ export default function AdminClients() {
                           {client.phone || "—"}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">
-                          {client.appointments.toLocaleString()}
+                          {(client.appointments ?? 0).toLocaleString()}
                         </td>
                         <td className="px-6 py-4">
                           <span
-                            className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                            className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${
                               client.active
                                 ? "bg-green-100 text-green-700"
                                 : "bg-gray-200 text-gray-600"
@@ -160,14 +182,15 @@ export default function AdminClients() {
                         <td className="px-6 py-4 text-right">
                           <button
                             onClick={() => handleToggleStatus(client)}
-                            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                            disabled={updatingClientId === client.id}
+                            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-60 whitespace-nowrap ${
                               client.active
                                 ? "bg-red-50 text-red-600 hover:bg-red-100"
                                 : "bg-green-50 text-green-600 hover:bg-green-100"
                             }`}
                           >
-                            {client.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                            {client.active ? "Deactivate" : "Activate"}
+                            {updatingClientId === client.id ? null : client.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                            {updatingClientId === client.id ? "Updating..." : client.active ? "Deactivate" : "Activate"}
                           </button>
                         </td>
                       </tr>

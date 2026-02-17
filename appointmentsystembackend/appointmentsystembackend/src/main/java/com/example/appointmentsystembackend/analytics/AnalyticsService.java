@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,11 +20,17 @@ import org.springframework.stereotype.Service;
 import com.example.appointmentsystembackend.appointment.Appointment;
 import com.example.appointmentsystembackend.appointment.AppointmentRepository;
 import com.example.appointmentsystembackend.appointment.AppointmentStatus;
+import com.example.appointmentsystembackend.appointment.AppointmentService;
+import com.example.appointmentsystembackend.department.DepartmentRepository;
 import com.example.appointmentsystembackend.feedback.Feedback;
 import com.example.appointmentsystembackend.feedback.FeedbackRepository;
+import com.example.appointmentsystembackend.notification.Notification;
+import com.example.appointmentsystembackend.notification.NotificationRepository;
 import com.example.appointmentsystembackend.schedule.BlockedDateRepository;
 import com.example.appointmentsystembackend.schedule.StaffScheduleService;
 import com.example.appointmentsystembackend.schedule.WorkSchedule;
+import com.example.appointmentsystembackend.servicecatalog.ServiceCatalog;
+import com.example.appointmentsystembackend.servicecatalog.ServiceCatalogRepository;
 import com.example.appointmentsystembackend.settings.SystemSettingsService;
 import com.example.appointmentsystembackend.user.Role;
 import com.example.appointmentsystembackend.user.User;
@@ -32,24 +39,42 @@ import com.example.appointmentsystembackend.user.UserRepository;
 @Service
 public class AnalyticsService {
 	private final AppointmentRepository appointmentRepository;
+	private final AppointmentService appointmentService;
 	private final UserRepository userRepository;
 	private final FeedbackRepository feedbackRepository;
+	private final ServiceCatalogRepository serviceCatalogRepository;
+	private final DepartmentRepository departmentRepository;
+	private final NotificationRepository notificationRepository;
 	private final SystemSettingsService settingsService;
 	private final StaffScheduleService staffScheduleService;
 	private final BlockedDateRepository blockedDateRepository;
 
-	public AnalyticsService(AppointmentRepository appointmentRepository, UserRepository userRepository,
-			FeedbackRepository feedbackRepository, SystemSettingsService settingsService,
+	public AnalyticsService(AppointmentRepository appointmentRepository, AppointmentService appointmentService,
+			UserRepository userRepository,
+			FeedbackRepository feedbackRepository, ServiceCatalogRepository serviceCatalogRepository,
+			DepartmentRepository departmentRepository,
+			NotificationRepository notificationRepository,
+			SystemSettingsService settingsService,
 			StaffScheduleService staffScheduleService, BlockedDateRepository blockedDateRepository) {
 		this.appointmentRepository = appointmentRepository;
+		this.appointmentService = appointmentService;
 		this.userRepository = userRepository;
 		this.feedbackRepository = feedbackRepository;
+		this.serviceCatalogRepository = serviceCatalogRepository;
+		this.departmentRepository = departmentRepository;
+		this.notificationRepository = notificationRepository;
 		this.settingsService = settingsService;
 		this.staffScheduleService = staffScheduleService;
 		this.blockedDateRepository = blockedDateRepository;
 	}
 
 	public AdminReportsResponse getAdminReports(String range, String department) {
+		try {
+			appointmentService.autoAssignUnassignedAppointments();
+		} catch (Exception ignored) {
+			// Keep report endpoint resilient even if backfill hits legacy bad rows.
+		}
+
 		LocalDate today = LocalDate.now();
 		boolean allTime = "all".equalsIgnoreCase(range);
 		LocalDate startDate = switch (range) {
@@ -59,108 +84,172 @@ public class AnalyticsService {
 			default -> today.minusDays(30);
 		};
 
-		List<Appointment> appointments = appointmentRepository.findAll().stream()
+		List<Appointment> allAppointments = appointmentRepository.findAll();
+		List<Appointment> graphAppointments = allAppointments.stream()
+				.filter(apt -> "all".equalsIgnoreCase(department) || department.equalsIgnoreCase(resolveDepartmentForReport(apt)))
+				.toList();
+
+		List<Appointment> appointments = allAppointments.stream()
 				.filter(apt -> allTime || (!apt.getDate().isBefore(startDate) && !apt.getDate().isAfter(today)))
 				.filter(apt -> {
 					if ("all".equalsIgnoreCase(department)) {
 						return true;
 					}
-					if (apt.getStaff() == null || apt.getStaff().getDepartment() == null) {
-						return false;
-					}
-					return department.equalsIgnoreCase(apt.getStaff().getDepartment());
+					return department.equalsIgnoreCase(resolveDepartmentForReport(apt));
 				})
 				.toList();
 
 		long totalAppointments = appointments.size();
-		long completed = appointments.stream().filter(apt -> apt.getStatus() == AppointmentStatus.COMPLETED).count();
-		double completionRate = totalAppointments == 0 ? 0 : (completed * 100.0 / totalAppointments);
+		long approvedAppointments = graphAppointments.stream().filter(this::isApprovedStatus).count();
+		long rejectedAppointments = graphAppointments.stream().filter(this::isRejectedStatus).count();
+		long pendingAppointments = graphAppointments.stream().filter(apt -> apt.getStatus() == AppointmentStatus.PENDING).count();
+		long totalAppointmentsForGraphs = graphAppointments.size();
+		double approvedRate = totalAppointmentsForGraphs == 0 ? 0 : (approvedAppointments * 100.0 / totalAppointmentsForGraphs);
+		long assignedAppointments = appointments.stream().filter(apt -> resolveAssignedStaffForReport(apt) != null).count();
+		long unassignedAppointments = totalAppointments - assignedAppointments;
 
-		double avgResponseHours = appointments.stream()
-				.mapToDouble(apt -> {
-					LocalDateTime appointmentTime = apt.getDate().atTime(apt.getTime());
-					long hours = java.time.Duration.between(apt.getCreatedAt().toLocalDateTime(), appointmentTime).toHours();
-					return Math.max(hours, 0);
-				})
+		List<User> users = userRepository.findAll();
+		long totalUsers = users.size();
+		long totalClients = users.stream().filter(user -> user.getRole() == Role.CLIENT).count();
+		long totalStaff = users.stream().filter(user -> user.getRole() == Role.STAFF).count();
+		long totalAdmins = users.stream().filter(user -> user.getRole() == Role.ADMIN).count();
+		long activeUsers = users.stream().filter(User::isActive).count();
+
+		List<com.example.appointmentsystembackend.department.Department> departments = departmentRepository.findAll();
+		long totalDepartments = departments.size();
+		long activeDepartments = departments.stream().filter(com.example.appointmentsystembackend.department.Department::isActive)
+				.count();
+
+		List<ServiceCatalog> services = serviceCatalogRepository.findAll();
+		long totalServices = services.size();
+		long activeServices = services.stream().filter(ServiceCatalog::isActive).count();
+
+		List<Notification> notifications = notificationRepository.findAll();
+		long totalNotifications = notifications.size();
+		long unreadNotifications = notifications.stream().filter(notification -> !notification.isRead()).count();
+
+		double averageFeedbackRating = feedbackRepository.findAll().stream()
+				.mapToInt(Feedback::getRating)
 				.average()
 				.orElse(0);
 
-		long activeUsers = userRepository.findAll().stream().filter(User::isActive).count();
+		List<AdminReportsResponse.StatusCount> statusBreakdown = List.of(
+				new AdminReportsResponse.StatusCount("Approved", approvedAppointments),
+				new AdminReportsResponse.StatusCount("Rejected", rejectedAppointments),
+				new AdminReportsResponse.StatusCount("Pending", pendingAppointments));
 
-		Map<String, Long> serviceCounts = appointments.stream()
-				.collect(Collectors.groupingBy(Appointment::getAppointmentType, Collectors.counting()));
-		List<AdminReportsResponse.ServiceCount> services = serviceCounts.entrySet().stream()
-				.sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-				.map(entry -> new AdminReportsResponse.ServiceCount(
-						entry.getKey(),
-						entry.getValue(),
-						totalAppointments == 0 ? 0 : (int) Math.round(entry.getValue() * 100.0 / totalAppointments)))
-				.toList();
-
-		List<AdminReportsResponse.StaffSummary> topStaff = userRepository.findAll().stream()
-				.filter(user -> user.getRole() == Role.STAFF)
-				.map(user -> {
-					long completedCount = appointmentRepository.findByStaffId(user.getId()).stream()
-							.filter(apt -> apt.getStatus() == AppointmentStatus.COMPLETED)
-							.count();
-					double rating = feedbackRepository.findByStaffId(user.getId()).stream()
-							.mapToInt(Feedback::getRating)
-							.average()
-							.orElse(0);
-					return new AdminReportsResponse.StaffSummary(
-							user.getFullName(),
-							user.getDepartment() == null ? "General" : user.getDepartment(),
-							completedCount,
-							roundOneDecimal(rating));
-				})
-				.sorted(Comparator.comparingLong(AdminReportsResponse.StaffSummary::completed).reversed())
-				.limit(5)
-				.toList();
-
-		Map<DayOfWeek, Long> weekdayCounts = appointments.stream()
-				.collect(Collectors.groupingBy(apt -> apt.getDate().getDayOfWeek(), Collectors.counting()));
-		List<AdminReportsResponse.DayCount> weeklyTrend = List.of(
-				DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY,
-				DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY).stream()
-				.map(day -> new AdminReportsResponse.DayCount(
-						day.getDisplayName(TextStyle.SHORT, Locale.ENGLISH),
-						weekdayCounts.getOrDefault(day, 0L)))
+		LocalDate trendStartDate = graphAppointments.stream()
+				.map(Appointment::getDate)
+				.min(LocalDate::compareTo)
+				.orElse(today.minusDays(6));
+		LocalDate trendEndDate = graphAppointments.stream()
+				.map(Appointment::getDate)
+				.max(LocalDate::compareTo)
+				.orElse(today);
+		if (trendEndDate.isBefore(trendStartDate)) {
+			trendEndDate = trendStartDate;
+		}
+		Map<LocalDate, Long> completedByDate = graphAppointments.stream()
+				.filter(apt -> apt.getStatus() == AppointmentStatus.COMPLETED)
+				.collect(Collectors.groupingBy(Appointment::getDate, Collectors.counting()));
+		List<AdminReportsResponse.DayCount> weeklyTrend = trendStartDate.datesUntil(trendEndDate.plusDays(1))
+				.map(date -> new AdminReportsResponse.DayCount(
+						date.toString(),
+						completedByDate.getOrDefault(date, 0L)))
 				.toList();
 
 		Map<String, Long> departmentCounts = appointments.stream()
-				.collect(Collectors.groupingBy(apt -> {
-					if (apt.getStaff() == null || apt.getStaff().getDepartment() == null) {
-						return "Unassigned";
-					}
-					return apt.getStaff().getDepartment();
-				}, Collectors.counting()));
+				.collect(Collectors.groupingBy(this::resolveDepartmentForReport, Collectors.counting()));
 		List<AdminReportsResponse.DepartmentCount> departmentBreakdown = departmentCounts.entrySet().stream()
 				.sorted(Map.Entry.<String, Long>comparingByValue().reversed())
 				.map(entry -> new AdminReportsResponse.DepartmentCount(entry.getKey(), entry.getValue()))
 				.toList();
 
-		double avgRating = feedbackRepository.findAll().stream()
-				.mapToInt(Feedback::getRating)
-				.average()
-				.orElse(0);
-		double satisfactionPercent = avgRating == 0 ? 0 : (avgRating / 5.0) * 100;
-		double apiResponsePercent = Math.max(70, 100 - Math.min(avgResponseHours * 4, 30));
+		Map<String, List<Appointment>> appointmentsByStaff = new LinkedHashMap<>();
+		Map<String, User> staffByKey = new LinkedHashMap<>();
+		for (Appointment appointment : appointments) {
+			User staff = resolveAssignedStaffForReport(appointment);
+			if (staff == null) {
+				continue;
+			}
+			String key = staff.getId() != null ? staff.getId().toString() : (staff.getEmail() != null ? staff.getEmail() : staff.getFullName());
+			if (key == null || key.isBlank()) {
+				continue;
+			}
+			staffByKey.putIfAbsent(key, staff);
+			appointmentsByStaff.computeIfAbsent(key, ignored -> new ArrayList<>()).add(appointment);
+		}
+		List<AdminReportsResponse.StaffWorkload> staffWorkload = appointmentsByStaff.entrySet().stream()
+				.map(entry -> {
+					User staff = staffByKey.get(entry.getKey());
+					List<Appointment> staffAppointments = entry.getValue();
+					long total = staffAppointments.size();
+					long approved = staffAppointments.stream().filter(this::isApprovedStatus).count();
+					long rejected = staffAppointments.stream().filter(this::isRejectedStatus).count();
+					long pending = staffAppointments.stream().filter(apt -> apt.getStatus() == AppointmentStatus.PENDING).count();
+					String staffName = staff != null && staff.getFullName() != null ? staff.getFullName() : "Unknown Staff";
+					String staffDepartment = staff != null && staff.getDepartment() != null && !staff.getDepartment().isBlank()
+							? staff.getDepartment()
+							: "General";
+					return new AdminReportsResponse.StaffWorkload(
+							staffName,
+							staffDepartment,
+							total,
+							approved,
+							rejected,
+							pending);
+				})
+				.sorted(Comparator.comparingLong(AdminReportsResponse.StaffWorkload::total).reversed())
+				.toList();
 
-		List<AdminReportsResponse.HealthMetric> health = List.of(
-				new AdminReportsResponse.HealthMetric("Server Uptime", 99.9, "Excellent"),
-				new AdminReportsResponse.HealthMetric("Database Performance", 98.5, "Good"),
-				new AdminReportsResponse.HealthMetric("API Response Time", roundOneDecimal(apiResponsePercent), "Good"),
-				new AdminReportsResponse.HealthMetric("User Satisfaction", roundOneDecimal(satisfactionPercent),
-						avgRating >= 4.5 ? "Excellent" : "Good"));
+		List<AdminReportsResponse.AppointmentReportItem> appointmentRows = allAppointments.stream()
+				.sorted(Comparator.comparing(Appointment::getDate).reversed()
+						.thenComparing(Appointment::getTime).reversed())
+				.map(apt -> {
+					String reportStatus;
+					if (isApprovedStatus(apt)) {
+						reportStatus = "Approved";
+					} else if (isRejectedStatus(apt)) {
+						reportStatus = "Rejected";
+					} else {
+						reportStatus = "Pending";
+					}
+					User resolvedStaff = resolveAssignedStaffForReport(apt);
+					return new AdminReportsResponse.AppointmentReportItem(
+							apt.getId().toString(),
+							apt.getDate().toString(),
+							apt.getTime().toString(),
+							reportStatus,
+							apt.getAppointmentType(),
+							resolveDepartmentForReport(apt),
+							apt.getClient() != null ? apt.getClient().getFullName() : "Unknown Client",
+							apt.getClient() != null ? apt.getClient().getEmail() : "-",
+							resolvedStaff != null ? resolvedStaff.getFullName() : "Unassigned",
+							resolvedStaff != null ? resolvedStaff.getEmail() : "-");
+				})
+				.toList();
 
 		return new AdminReportsResponse(
-				new AdminReportsResponse.Metrics(totalAppointments, roundOneDecimal(completionRate),
-						roundOneDecimal(avgResponseHours), activeUsers),
-				services,
-				topStaff,
+				new AdminReportsResponse.Metrics(totalAppointments, approvedAppointments, rejectedAppointments,
+						pendingAppointments, roundOneDecimal(approvedRate), assignedAppointments, unassignedAppointments),
+				new AdminReportsResponse.SystemSnapshot(
+						totalUsers,
+						totalClients,
+						totalStaff,
+						totalAdmins,
+						activeUsers,
+						totalDepartments,
+						activeDepartments,
+						totalServices,
+						activeServices,
+						totalNotifications,
+						unreadNotifications,
+						roundOneDecimal(averageFeedbackRating)),
+				statusBreakdown,
 				weeklyTrend,
 				departmentBreakdown,
-				health);
+				staffWorkload,
+				appointmentRows);
 	}
 
 	public AdminDashboardResponse getAdminDashboard() {
@@ -476,6 +565,95 @@ public class AnalyticsService {
 
 	private double roundOneDecimal(double value) {
 		return Math.round(value * 10.0) / 10.0;
+	}
+
+	private boolean isApprovedStatus(Appointment appointment) {
+		AppointmentStatus status = appointment.getStatus();
+		return status == AppointmentStatus.CONFIRMED
+				|| status == AppointmentStatus.SCHEDULED
+				|| status == AppointmentStatus.COMPLETED;
+	}
+
+	private boolean isRejectedStatus(Appointment appointment) {
+		return appointment.getStatus() == AppointmentStatus.CANCELLED;
+	}
+
+	private String resolveDepartmentForReport(Appointment appointment) {
+		User resolvedStaff = resolveAssignedStaffForReport(appointment);
+		if (resolvedStaff != null && resolvedStaff.getDepartment() != null
+				&& !resolvedStaff.getDepartment().isBlank()) {
+			return resolvedStaff.getDepartment();
+		}
+		ServiceCatalog service = resolveServiceForReport(appointment);
+		if (service != null && service.getDepartmentId() != null) {
+			return departmentRepository.findById(service.getDepartmentId())
+					.map(dept -> dept.getName())
+					.orElse("Unknown Department");
+		}
+		return "Unassigned";
+	}
+
+	private User resolveAssignedStaffForReport(Appointment appointment) {
+		try {
+			if (appointment.getStaff() != null) {
+				return appointment.getStaff();
+			}
+			ServiceCatalog service = resolveServiceForReport(appointment);
+			if (service == null || service.getDepartmentId() == null) {
+				return null;
+			}
+			List<User> candidates = new ArrayList<>(userRepository.findByRoleAndActiveTrueAndDepartmentId(
+					Role.STAFF,
+					service.getDepartmentId()));
+			departmentRepository.findById(service.getDepartmentId())
+					.map(dept -> dept.getName())
+					.ifPresent(deptName -> candidates.addAll(
+							userRepository.findByRoleAndActiveTrueAndDepartmentIgnoreCase(Role.STAFF, deptName)));
+			candidates.addAll(userRepository.findByRoleAndActiveTrue(Role.STAFF).stream()
+					.filter(staff -> staff.getServiceId() != null)
+					.filter(staff -> serviceCatalogRepository.findById(staff.getServiceId())
+							.map(staffService -> service.getDepartmentId().equals(staffService.getDepartmentId()))
+							.orElse(false))
+					.toList());
+			return candidates.stream()
+					.filter(staff -> staff.getId() != null)
+					.collect(Collectors.toMap(User::getId, user -> user, (existing, ignored) -> existing, LinkedHashMap::new))
+					.values().stream()
+					.min(Comparator
+							.comparingLong((User staff) -> appointmentRepository.countByStaffId(staff.getId()))
+							.thenComparing(User::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+							.thenComparing(User::getId, Comparator.nullsLast(Comparator.naturalOrder())))
+					.orElse(null);
+		} catch (Exception ignored) {
+			return null;
+		}
+	}
+
+	private ServiceCatalog resolveServiceForReport(Appointment appointment) {
+		if (appointment.getServiceId() != null) {
+			ServiceCatalog byId = serviceCatalogRepository.findById(appointment.getServiceId()).orElse(null);
+			if (byId != null) {
+				return byId;
+			}
+		}
+		if (appointment.getAppointmentType() == null || appointment.getAppointmentType().isBlank()) {
+			return null;
+		}
+		ServiceCatalog byName = serviceCatalogRepository
+				.findFirstByNameIgnoreCaseAndActiveTrue(appointment.getAppointmentType())
+				.orElse(null);
+		if (byName != null) {
+			return byName;
+		}
+		String normalizedType = normalizeLabel(appointment.getAppointmentType());
+		return serviceCatalogRepository.findByActiveTrueOrderByNameAsc().stream()
+				.filter(item -> normalizeLabel(item.getName()).equals(normalizedType))
+				.findFirst()
+				.orElse(null);
+	}
+
+	private String normalizeLabel(String value) {
+		return value == null ? "" : value.trim().toLowerCase().replaceAll("[^a-z0-9]+", " ");
 	}
 
 	private String formatTimeAgo(LocalDateTime time) {

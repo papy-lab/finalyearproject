@@ -4,22 +4,38 @@ import java.util.List;
 
 public record AdminReportsResponse(
 		Metrics metrics,
-		List<ServiceCount> serviceTypes,
-		List<StaffSummary> topStaff,
+		SystemSnapshot systemSnapshot,
+		List<StatusCount> statusBreakdown,
 		List<DayCount> weeklyTrend,
 		List<DepartmentCount> departmentBreakdown,
-		List<HealthMetric> systemHealth) {
+		List<StaffWorkload> staffWorkload,
+		List<AppointmentReportItem> appointments) {
 	public record Metrics(
 			long totalAppointments,
-			double completionRate,
-			double avgResponseTimeHours,
-			long activeUsers) {
+			long approvedAppointments,
+			long rejectedAppointments,
+			long pendingAppointments,
+			double approvedRate,
+			long assignedAppointments,
+			long unassignedAppointments) {
 	}
 
-	public record ServiceCount(String name, long count, int percentage) {
+	public record SystemSnapshot(
+			long totalUsers,
+			long totalClients,
+			long totalStaff,
+			long totalAdmins,
+			long activeUsers,
+			long totalDepartments,
+			long activeDepartments,
+			long totalServices,
+			long activeServices,
+			long totalNotifications,
+			long unreadNotifications,
+			double averageFeedbackRating) {
 	}
 
-	public record StaffSummary(String name, String department, long completed, double rating) {
+	public record StatusCount(String status, long count) {
 	}
 
 	public record DayCount(String day, long value) {
@@ -28,6 +44,19 @@ public record AdminReportsResponse(
 	public record DepartmentCount(String name, long count) {
 	}
 
-	public record HealthMetric(String label, double value, String status) {
+	public record StaffWorkload(String name, String department, long total, long approved, long rejected, long pending) {
+	}
+
+	public record AppointmentReportItem(
+			String appointmentId,
+			String date,
+			String time,
+			String status,
+			String serviceType,
+			String department,
+			String clientName,
+			String clientEmail,
+			String staffName,
+			String staffEmail) {
 	}
 }

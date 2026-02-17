@@ -23,6 +23,8 @@ import AdminStaffManagement from "./pages/dashboards/AdminStaffManagement";
 import AdminClients from "./pages/dashboards/AdminClients";
 import AdminReports from "./pages/dashboards/AdminReports";
 import AdminSettings from "./pages/dashboards/AdminSettings";
+import AdminDepartments from "./pages/dashboards/AdminDepartments";
+import AdminServices from "./pages/dashboards/AdminServices";
 import StaffDashboard from "./pages/dashboards/StaffDashboard";
 import StaffAppointments from "./pages/dashboards/StaffAppointments";
 import StaffHours from "./pages/dashboards/StaffHours";
@@ -55,6 +57,8 @@ export default function App() {
               <Route path="/admin-staff" element={<AdminStaffManagement />} />
               <Route path="/admin-clients" element={<AdminClients />} />
               <Route path="/admin-reports" element={<AdminReports />} />
+              <Route path="/admin-departments" element={<AdminDepartments />} />
+              <Route path="/admin-services" element={<AdminServices />} />
               <Route path="/admin-settings" element={<AdminSettings />} />
               <Route path="/staff-dashboard" element={<StaffDashboard />} />
               <Route path="/staff-appointments" element={<StaffAppointments />} />

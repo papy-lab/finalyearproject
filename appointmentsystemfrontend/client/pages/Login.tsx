@@ -35,9 +35,21 @@ export default function Login() {
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
+
   const handleMissingGoogleConfig = () => {
     setError("Google sign-in is not configured yet. Add VITE_GOOGLE_CLIENT_ID in appointmentsystemfrontend/.env");
   };
+
+  useEffect(() => {
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID || !googleButtonRef.current) {
@@ -107,57 +119,48 @@ export default function Login() {
     }
   };
 
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center px-4">
+    <div className="fixed inset-0 overflow-hidden bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center px-4 py-3">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          {/* Logo */}
-          <div className="text-center mb-8">
+        <div className="bg-white rounded-xl shadow-lg p-5 sm:p-6">
+          <div className="text-center mb-4">
             <img
               src="https://cdn.builder.io/api/v1/image/assets%2F2e01e69b3779464b92ed3fb015b92f56%2Fad1b5faec75e4f65a92433b7fe3f0202?format=webp&width=100"
               alt="RRA Logo"
-              className="h-12 mx-auto mb-4"
+              className="h-10 mx-auto mb-2"
             />
-            <h1 className="text-2xl font-bold text-rra-navy">Welcome Back</h1>
-            <p className="text-gray-600 mt-2">Sign in to your account</p>
+            <h1 className="text-xl font-bold text-rra-navy">Welcome Back</h1>
+            <p className="text-sm text-gray-600 mt-1">Sign in to your account</p>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
+              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">{error}</div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none transition"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none transition"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none transition"
+                placeholder="********"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none transition"
               />
             </div>
 
-            <div className="flex justify-between items-center pt-2">
+            <div className="flex justify-between items-center pt-1">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" className="rounded border-gray-300" />
                 <span className="text-sm text-gray-600">Remember me</span>
@@ -169,13 +172,13 @@ export default function Login() {
 
             <button
               type="submit"
-              className="w-full bg-rra-blue text-white py-2 rounded-lg font-semibold hover:bg-rra-navy transition flex items-center justify-center gap-2 mt-6"
+              className="w-full bg-rra-blue text-white py-2 rounded-lg font-semibold hover:bg-rra-navy transition flex items-center justify-center gap-2 mt-3"
             >
               <LogIn className="h-5 w-5" />
               Sign In
             </button>
 
-            <div className="pt-2 flex justify-center">
+            <div className="pt-1 flex justify-center">
               {GOOGLE_CLIENT_ID ? (
                 <div ref={googleButtonRef} />
               ) : (
@@ -189,25 +192,21 @@ export default function Login() {
                 </button>
               )}
             </div>
-            <p className="text-center text-xs text-gray-500">
-              Clients can sign in with Google or email/password.
-            </p>
+            <p className="text-center text-xs text-gray-500 leading-tight">Clients can sign in with Google or email/password.</p>
           </form>
 
-          {/* Sign Up Link */}
-          <p className="text-center mt-6 text-gray-600">
+          <p className="text-center mt-4 text-sm text-gray-600">
             Don't have an account?{" "}
             <Link to="/signup" className="text-rra-blue font-semibold hover:text-rra-navy transition">
               Sign up
             </Link>
           </p>
-        </div>
 
-        {/* Back to Home */}
-        <div className="text-center mt-6">
-          <Link to="/" className="text-gray-600 hover:text-rra-blue transition">
-            ← Back to Home
-          </Link>
+          <div className="text-center mt-2">
+            <Link to="/" className="text-xs text-gray-600 hover:text-rra-blue transition">
+              {"<-"} Back to Home
+            </Link>
+          </div>
         </div>
       </div>
     </div>

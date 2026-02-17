@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, Users, Calendar, BarChart3, Settings, Menu, ChevronDown, UserRound } from "lucide-react";
+import { LogOut, Users, Calendar, BarChart3, Settings, Menu, ChevronDown, UserRound, Building2, Briefcase } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "react-router-dom";
@@ -12,7 +12,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, isReady } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -27,6 +27,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+    if (!user || user.role !== "admin") {
+      navigate("/login");
+    }
+  }, [isReady, user, navigate]);
+
   const handleConfirmLogout = () => {
     logout();
     navigate("/");
@@ -36,6 +45,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const isActive = (path: string) => {
     return location.pathname === path;
   };
+
+  if (!isReady || !user || user.role !== "admin") {
+    return null;
+  }
 
   return (
     <div className="h-screen bg-gray-100 overflow-hidden">
@@ -150,6 +163,28 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             >
               <Users className="h-5 w-5" />
               Staff Management
+            </Link>
+            <Link
+              to="/admin-departments"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                isActive("/admin-departments")
+                  ? "bg-blue-900 text-white font-medium"
+                  : "hover:bg-blue-900"
+              }`}
+            >
+              <Building2 className="h-5 w-5" />
+              Departments
+            </Link>
+            <Link
+              to="/admin-services"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                isActive("/admin-services")
+                  ? "bg-blue-900 text-white font-medium"
+                  : "hover:bg-blue-900"
+              }`}
+            >
+              <Briefcase className="h-5 w-5" />
+              Services
             </Link>
             <Link
               to="/admin-clients"

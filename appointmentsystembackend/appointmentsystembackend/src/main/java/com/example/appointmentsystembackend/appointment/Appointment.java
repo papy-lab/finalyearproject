@@ -34,6 +34,9 @@ public class Appointment {
 	@JoinColumn(name = "staff_id")
 	private User staff;
 
+	@Column
+	private UUID serviceId;
+
 	@Column(nullable = false)
 	private String appointmentType;
 
@@ -62,10 +65,11 @@ public class Appointment {
 	protected Appointment() {
 	}
 
-	public Appointment(User client, User staff, String appointmentType, LocalDate date, LocalTime time,
+	public Appointment(User client, User staff, UUID serviceId, String appointmentType, LocalDate date, LocalTime time,
 			String location, AppointmentStatus status, String notes) {
 		this.client = client;
 		this.staff = staff;
+		this.serviceId = serviceId;
 		this.appointmentType = appointmentType;
 		this.date = date;
 		this.time = time;
@@ -109,6 +113,14 @@ public class Appointment {
 
 	public void setStaff(User staff) {
 		this.staff = staff;
+	}
+
+	public UUID getServiceId() {
+		return serviceId;
+	}
+
+	public void setServiceId(UUID serviceId) {
+		this.serviceId = serviceId;
 	}
 
 	public String getAppointmentType() {

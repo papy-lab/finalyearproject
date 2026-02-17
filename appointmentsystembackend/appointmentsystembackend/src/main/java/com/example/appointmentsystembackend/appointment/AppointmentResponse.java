@@ -4,6 +4,10 @@ import com.example.appointmentsystembackend.user.User;
 
 public record AppointmentResponse(
 		String id,
+		String serviceId,
+		String serviceName,
+		String departmentId,
+		String departmentName,
 		String appointmentType,
 		String date,
 		String time,
@@ -19,6 +23,10 @@ public record AppointmentResponse(
 		User staff = appointment.getStaff();
 		return new AppointmentResponse(
 				appointment.getId().toString(),
+				appointment.getServiceId() != null ? appointment.getServiceId().toString() : null,
+				appointment.getAppointmentType(),
+				staff != null && staff.getDepartmentId() != null ? staff.getDepartmentId().toString() : null,
+				staff != null ? staff.getDepartment() : null,
 				appointment.getAppointmentType(),
 				appointment.getDate().toString(),
 				appointment.getTime().toString(),

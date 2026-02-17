@@ -25,6 +25,10 @@ export interface UserProfile {
 
 export interface AppointmentResponse {
   id: string;
+  serviceId?: string | null;
+  serviceName?: string | null;
+  departmentId?: string | null;
+  departmentName?: string | null;
   appointmentType: string;
   date: string;
   time: string;
@@ -50,10 +54,31 @@ export interface StaffResponse {
   id: string;
   fullName: string;
   email: string;
+  departmentId?: string | null;
   department?: string | null;
+  serviceId?: string | null;
+  serviceName?: string | null;
   phone?: string | null;
   status: string;
   appointmentsHandled: number;
+}
+
+export interface DepartmentResponse {
+  id: string;
+  name: string;
+  description?: string | null;
+  type: "operational" | "support";
+  active: boolean;
+}
+
+export interface ServiceCatalogResponse {
+  id: string;
+  name: string;
+  description?: string | null;
+  departmentId: string;
+  departmentName?: string | null;
+  requirements?: string | null;
+  active: boolean;
 }
 
 export interface ClientResponse {
@@ -85,15 +110,50 @@ export interface SystemSettingsResponse {
 export interface AdminReportsResponse {
   metrics: {
     totalAppointments: number;
-    completionRate: number;
-    avgResponseTimeHours: number;
-    activeUsers: number;
+    approvedAppointments: number;
+    rejectedAppointments: number;
+    pendingAppointments: number;
+    approvedRate: number;
+    assignedAppointments: number;
+    unassignedAppointments: number;
   };
-  serviceTypes: Array<{ name: string; count: number; percentage: number }>;
-  topStaff: Array<{ name: string; department: string; completed: number; rating: number }>;
+  systemSnapshot: {
+    totalUsers: number;
+    totalClients: number;
+    totalStaff: number;
+    totalAdmins: number;
+    activeUsers: number;
+    totalDepartments: number;
+    activeDepartments: number;
+    totalServices: number;
+    activeServices: number;
+    totalNotifications: number;
+    unreadNotifications: number;
+    averageFeedbackRating: number;
+  };
+  statusBreakdown: Array<{ status: string; count: number }>;
   weeklyTrend: Array<{ day: string; value: number }>;
   departmentBreakdown: Array<{ name: string; count: number }>;
-  systemHealth: Array<{ label: string; value: number; status: string }>;
+  staffWorkload: Array<{
+    name: string;
+    department: string;
+    total: number;
+    approved: number;
+    rejected: number;
+    pending: number;
+  }>;
+  appointments: Array<{
+    appointmentId: string;
+    date: string;
+    time: string;
+    status: string;
+    serviceType: string;
+    department: string;
+    clientName: string;
+    clientEmail: string;
+    staffName: string;
+    staffEmail: string;
+  }>;
 }
 
 export interface AdminDashboardResponse {
@@ -252,10 +312,10 @@ export const api = {
 
   listAppointments: () => apiFetch<AppointmentResponse[]>("/api/appointments"),
   createAppointment: (payload: {
-    appointmentType: string;
+    serviceId: string;
     date: string;
     time: string;
-    location: string;
+    location?: string;
     notes?: string;
     staffId?: string;
   }) =>
@@ -288,6 +348,8 @@ export const api = {
   createStaff: (payload: {
     email: string;
     fullName: string;
+    departmentId?: string;
+    serviceId?: string;
     department?: string;
     phone?: string;
     password: string;
@@ -295,6 +357,88 @@ export const api = {
     apiFetch<StaffResponse>("/api/staff", {
       method: "POST",
       body: JSON.stringify(payload),
+    }),
+  updateStaff: (
+    id: string,
+    payload: {
+      email: string;
+      fullName: string;
+      departmentId?: string;
+      serviceId?: string;
+      department?: string;
+      phone?: string;
+      active?: boolean;
+    }
+  ) =>
+    apiFetch<StaffResponse>(`/api/staff/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteStaff: (id: string) =>
+    apiFetch<void>(`/api/staff/${id}`, {
+      method: "DELETE",
+    }),
+  listDepartments: () => apiFetch<DepartmentResponse[]>("/api/departments"),
+  createDepartment: (payload: {
+    name: string;
+    description?: string;
+    type: "OPERATIONAL" | "SUPPORT";
+  }) =>
+    apiFetch<DepartmentResponse>("/api/departments", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateDepartment: (
+    id: string,
+    payload: {
+      name: string;
+      description?: string;
+      type: "OPERATIONAL" | "SUPPORT";
+    }
+  ) =>
+    apiFetch<DepartmentResponse>(`/api/departments/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteDepartment: (id: string) =>
+    apiFetch<void>(`/api/departments/${id}`, {
+      method: "DELETE",
+    }),
+  listServices: () => apiFetch<ServiceCatalogResponse[]>("/api/services"),
+  createService: (payload: {
+    name: string;
+    description?: string;
+    departmentId: string;
+    requirements?: string;
+    active?: boolean;
+  }) =>
+    apiFetch<ServiceCatalogResponse>("/api/services", {
+      method: "POST",
+      body: JSON.stringify({
+        ...payload,
+        active: payload.active ?? true,
+      }),
+    }),
+  updateService: (
+    id: string,
+    payload: {
+      name: string;
+      description?: string;
+      departmentId: string;
+      requirements?: string;
+      active?: boolean;
+    }
+  ) =>
+    apiFetch<ServiceCatalogResponse>(`/api/services/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        ...payload,
+        active: payload.active ?? true,
+      }),
+    }),
+  deleteService: (id: string) =>
+    apiFetch<void>(`/api/services/${id}`, {
+      method: "DELETE",
     }),
 
   listClients: () => apiFetch<ClientResponse[]>("/api/clients"),

@@ -1,4 +1,4 @@
-import { Download, CheckCircle2, Clock as ClockIcon, XCircle, TrendingUp } from "lucide-react";
+import { Download, CheckCircle2, Clock as ClockIcon, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import ClientLayout from "@/components/layout/ClientLayout";
 import { api, ClientHistoryResponse } from "@/lib/api";
@@ -7,6 +7,7 @@ export default function ClientHistory() {
   const currentYear = new Date().getFullYear();
   const [filterYear, setFilterYear] = useState(currentYear.toString());
   const [history, setHistory] = useState<ClientHistoryResponse | null>(null);
+  const [exportMessage, setExportMessage] = useState("");
 
   const years = useMemo(() => {
     return [currentYear, currentYear - 1, currentYear - 2].map(String);
@@ -24,6 +25,117 @@ export default function ClientHistory() {
     loadHistory();
   }, [filterYear]);
 
+  const showTemporaryMessage = (message: string, ms = 3000) => {
+    setExportMessage(message);
+    setTimeout(() => setExportMessage(""), ms);
+  };
+
+  const handleExportCsv = () => {
+    if (!history) {
+      showTemporaryMessage("No history data to export.");
+      return;
+    }
+    const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
+    const lines = [
+      ["Section", "Field", "Value"].map(escapeCsv).join(","),
+      ["Stats", "Total Completed", String(history.stats.totalCompleted)].map(escapeCsv).join(","),
+      ["Stats", "Total Cancelled", String(history.stats.totalCancelled)].map(escapeCsv).join(","),
+      ["Stats", "Average Duration (min)", String(history.stats.avgDurationMinutes)].map(escapeCsv).join(","),
+      ["", "", ""].map(escapeCsv).join(","),
+      ["Completed", "Date", "Time", "Title", "Duration", "Officer", "Notes"].map(escapeCsv).join(","),
+      ...history.completedAppointments.map((apt) =>
+        ["Completed", apt.date, apt.time, apt.title, apt.duration, apt.officer, apt.notes]
+          .map(escapeCsv)
+          .join(",")
+      ),
+      ["", "", "", "", "", "", ""].map(escapeCsv).join(","),
+      ["Cancelled", "Date", "Title", "Reason", "Rescheduled"].map(escapeCsv).join(","),
+      ...history.cancelledAppointments.map((apt) =>
+        ["Cancelled", apt.date, apt.title, apt.reason, apt.rescheduled ? "Yes" : "No"]
+          .map(escapeCsv)
+          .join(",")
+      ),
+      ["", "", "", "", ""].map(escapeCsv).join(","),
+      ["Monthly Breakdown", "Month", "Count"].map(escapeCsv).join(","),
+      ...history.monthlyBreakdown.map((item) => ["Monthly Breakdown", item.month, String(item.count)].map(escapeCsv).join(",")),
+    ];
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `client-history-${filterYear}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showTemporaryMessage("CSV exported successfully.");
+  };
+
+  const handleExportPdf = () => {
+    if (!history) {
+      showTemporaryMessage("No history data to export.");
+      return;
+    }
+    const popup = window.open("", "_blank", "width=1100,height=750");
+    if (!popup) {
+      showTemporaryMessage("Popup blocked. Allow popups to export PDF.", 4000);
+      return;
+    }
+
+    const completedRows = history.completedAppointments
+      .map(
+        (apt) =>
+          `<tr><td>${apt.date}</td><td>${apt.time}</td><td>${apt.title}</td><td>${apt.duration}</td><td>${apt.officer}</td></tr>`
+      )
+      .join("");
+    const cancelledRows = history.cancelledAppointments
+      .map(
+        (apt) =>
+          `<tr><td>${apt.date}</td><td>${apt.title}</td><td>${apt.reason}</td><td>${apt.rescheduled ? "Yes" : "No"}</td></tr>`
+      )
+      .join("");
+
+    popup.document.write(`
+      <html>
+        <head>
+          <title>Client History Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
+            h1, h2 { margin: 0 0 8px 0; }
+            p { margin: 0 0 12px 0; color: #4b5563; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 12px; }
+            th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+            th { background: #f3f4f6; }
+          </style>
+        </head>
+        <body>
+          <h1>Client Appointment History Report</h1>
+          <p>Year: ${filterYear} | Generated: ${new Date().toLocaleString()}</p>
+          <p>
+            Completed: ${history.stats.totalCompleted} |
+            Cancelled: ${history.stats.totalCancelled} |
+            Avg Duration: ${history.stats.avgDurationMinutes} min
+          </p>
+          <h2>Completed Appointments</h2>
+          <table>
+            <thead><tr><th>Date</th><th>Time</th><th>Title</th><th>Duration</th><th>Officer</th></tr></thead>
+            <tbody>${completedRows || "<tr><td colspan='5'>No completed appointments</td></tr>"}</tbody>
+          </table>
+          <h2>Cancelled Appointments</h2>
+          <table>
+            <thead><tr><th>Date</th><th>Title</th><th>Reason</th><th>Rescheduled</th></tr></thead>
+            <tbody>${cancelledRows || "<tr><td colspan='4'>No cancelled appointments</td></tr>"}</tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    popup.document.close();
+    popup.focus();
+    popup.print();
+    showTemporaryMessage("PDF export dialog opened.");
+  };
+
   return (
     <ClientLayout>
       <div className="p-4 sm:p-8">
@@ -35,7 +147,7 @@ export default function ClientHistory() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid md:grid-cols-4 gap-4 mb-8">
+          <div className="grid md:grid-cols-3 gap-4 mb-8">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-medium text-gray-600">Total Completed</p>
@@ -63,16 +175,6 @@ export default function ClientHistory() {
               <p className="text-xs text-gray-500 mt-1">Per appointment</p>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-gray-600">Avg Rating</p>
-                <TrendingUp className="h-5 w-5 text-rra-gold" />
-              </div>
-              <p className="text-3xl font-bold text-gray-900">
-                {history?.stats.avgRating ? `${history.stats.avgRating.toFixed(1)}/5` : "0/5"}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">User satisfaction</p>
-            </div>
           </div>
 
           {/* Filter and Export */}
@@ -88,11 +190,26 @@ export default function ClientHistory() {
                 </option>
               ))}
             </select>
-            <button className="ml-auto flex items-center gap-2 bg-rra-blue text-white px-4 py-2 rounded-lg font-medium hover:bg-rra-navy transition">
+            <button
+              onClick={handleExportCsv}
+              className="ml-auto flex items-center gap-2 bg-rra-blue text-white px-4 py-2 rounded-lg font-medium hover:bg-rra-navy transition"
+            >
               <Download className="h-4 w-4" />
-              Export Report
+              Export CSV
+            </button>
+            <button
+              onClick={handleExportPdf}
+              className="flex items-center gap-2 bg-rra-navy text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition"
+            >
+              Export PDF
             </button>
           </div>
+
+          {exportMessage && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <span className="text-sm font-medium text-rra-green">{exportMessage}</span>
+            </div>
+          )}
 
           {/* Completed Appointments */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-8">

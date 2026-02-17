@@ -3,9 +3,9 @@ import { Calendar, Clock, Bell, BarChart3, Users, CheckCircle2 } from "lucide-re
 
 export default function Index() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pt-16">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+      <header className="fixed top-0 inset-x-0 z-50 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
@@ -105,7 +105,7 @@ export default function Index() {
               {
                 icon: Bell,
                 title: "Automated Reminders",
-                description: "Email and SMS notifications for confirmations, reminders, and rescheduling updates",
+                description: "Email notifications for confirmations, reminders, and rescheduling updates",
                 color: "bg-green-50 text-rra-green"
               },
               {
@@ -275,7 +275,7 @@ export default function Index() {
             {[
               { title: "User Management", desc: "Registration, login, and role-based access control" },
               { title: "Appointment Scheduling", desc: "Select slots and book instantly" },
-              { title: "Notification System", desc: "Email/SMS confirmations and reminders" },
+              { title: "Notification System", desc: "Email confirmations and reminders" },
               { title: "Admin Dashboard", desc: "Overview of all appointments and workload" },
               { title: "Reporting Module", desc: "Analytics and trend reports" },
               { title: "Feedback System", desc: "Collect user satisfaction ratings" }
@@ -303,7 +303,7 @@ export default function Index() {
               to="/signup"
               className="bg-white text-rra-blue px-8 py-3 rounded-lg font-semibold hover:bg-gray-50 transition text-center"
             >
-              Start Free Trial
+              Sign up
             </Link>
             <Link
               to="/login"

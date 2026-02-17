@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { api, AppointmentResponse } from "@/lib/api";
+import { api, AppointmentResponse, NotificationResponse } from "@/lib/api";
 
 interface RescheduleModalProps {
   open: boolean;
@@ -39,6 +39,14 @@ interface Appointment {
   title: string;
   status: "Confirmed" | "Pending" | "Completed" | "Cancelled";
   officeName: string;
+}
+
+interface DashboardNotification {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
 }
 
 function RescheduleModal({ open, onOpenChange, selectedAppointment, newDate, newTime, onDateChange, onTimeChange, onSubmit }: RescheduleModalProps) {
@@ -139,6 +147,8 @@ export default function ClientDashboard() {
   const { user } = useAuth();
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointmentStats, setAppointmentStats] = useState({ upcoming: 0, completed: 0, cancelled: 0 });
+  const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
 
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
@@ -264,6 +274,19 @@ export default function ClientDashboard() {
     const loadAppointments = async () => {
       try {
         const data = await api.listAppointments();
+        let upcoming = 0;
+        let completed = 0;
+        let cancelled = 0;
+        data.forEach((apt: AppointmentResponse) => {
+          const status = (apt.status || "").toLowerCase();
+          if (status === "completed") {
+            completed += 1;
+          } else if (status === "cancelled") {
+            cancelled += 1;
+          } else {
+            upcoming += 1;
+          }
+        });
         setAppointments(data.map((apt: AppointmentResponse) => ({
           id: apt.id,
           date: formatDate(apt.date),
@@ -272,12 +295,39 @@ export default function ClientDashboard() {
           status: mapStatus(apt.status),
           officeName: apt.location,
         })));
+        setAppointmentStats({ upcoming, completed, cancelled });
       } catch {
         setAppointments([]);
+        setAppointmentStats({ upcoming: 0, completed: 0, cancelled: 0 });
       }
     };
     loadAppointments();
   }, []);
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const data = await api.listNotifications();
+        setNotifications(
+          data.map((notif: NotificationResponse) => ({
+            id: notif.id,
+            title: notif.title,
+            message: notif.message,
+            read: notif.read,
+            createdAt: notif.createdAt,
+          }))
+        );
+      } catch {
+        setNotifications([]);
+      }
+    };
+    loadNotifications();
+  }, []);
+
+  const unreadNotifications = notifications.filter((n) => !n.read).length;
+  const recentNotifications = [...notifications]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3);
 
   return (
     <ClientLayout>
@@ -292,9 +342,9 @@ export default function ClientDashboard() {
           {/* Quick Stats */}
           <div className="grid md:grid-cols-3 gap-4 mb-8">
             {[
-              { label: "Upcoming", value: appointments.length.toString(), color: "bg-blue-50 text-rra-blue" },
-              { label: "Completed", value: "8", color: "bg-green-50 text-rra-green" },
-              { label: "Cancelled", value: "1", color: "bg-red-50 text-red-600" }
+              { label: "Upcoming", value: appointmentStats.upcoming.toString(), color: "bg-blue-50 text-rra-blue" },
+              { label: "Completed", value: appointmentStats.completed.toString(), color: "bg-green-50 text-rra-green" },
+              { label: "Cancelled", value: appointmentStats.cancelled.toString(), color: "bg-red-50 text-red-600" }
             ].map((stat, idx) => (
               <div key={idx} className={`${stat.color} rounded-xl p-6`}>
                 <p className="text-sm font-medium opacity-75">{stat.label}</p>
@@ -389,6 +439,28 @@ export default function ClientDashboard() {
               </div>
             </div>
           </div>
+
+          <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-rra-navy">Recent Notifications</h3>
+              <span className="text-sm font-medium text-gray-600">{unreadNotifications} unread</span>
+            </div>
+            {recentNotifications.length === 0 ? (
+              <p className="text-sm text-gray-500">No notifications available.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentNotifications.map((notif) => (
+                  <div key={notif.id} className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                    <p className="font-medium text-gray-900 text-sm">
+                      {notif.title}
+                      {!notif.read && <span className="inline-block ml-2 w-2 h-2 rounded-full bg-red-500" />}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">{notif.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -412,3 +484,4 @@ export default function ClientDashboard() {
     </ClientLayout>
   );
 }
+

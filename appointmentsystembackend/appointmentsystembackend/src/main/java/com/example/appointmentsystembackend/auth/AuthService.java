@@ -2,6 +2,7 @@ package com.example.appointmentsystembackend.auth;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -71,6 +72,8 @@ public class AuthService {
 		try {
 			auth = authenticationManager.authenticate(
 					new UsernamePasswordAuthenticationToken(normalizeEmail(request.email()), request.password()));
+		} catch (DisabledException ex) {
+			throw new IllegalArgumentException("Your account is inactive. Contact admin to reactivate it.");
 		} catch (AuthenticationException ex) {
 			throw new IllegalArgumentException("Invalid email or password");
 		}
@@ -93,6 +96,9 @@ public class AuthService {
 
 		if (user.getRole() != Role.CLIENT) {
 			throw new IllegalArgumentException("This Google account belongs to a staff/admin user. Use email login.");
+		}
+		if (!user.isActive()) {
+			throw new IllegalArgumentException("Your account is inactive. Contact admin to reactivate it.");
 		}
 
 		if (user.getFullName() == null || user.getFullName().isBlank()) {

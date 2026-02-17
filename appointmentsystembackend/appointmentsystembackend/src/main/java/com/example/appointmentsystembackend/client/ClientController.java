@@ -36,7 +36,6 @@ public class ClientController {
 
 	@GetMapping
 	public ResponseEntity<List<ClientResponse>> list() {
-		requireAdmin();
 		List<ClientResponse> clients = userRepository.findAll().stream()
 				.filter(user -> user.getRole() == Role.CLIENT)
 				.map(user -> ClientResponse.from(user, appointmentRepository.countByClientId(user.getId())))

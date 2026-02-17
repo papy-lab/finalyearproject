@@ -41,6 +41,15 @@ public class User implements UserDetails {
 	private String department;
 
 	@Column
+	private UUID departmentId;
+
+	@Column
+	private UUID serviceId;
+
+	@Column
+	private String serviceName;
+
+	@Column
 	private String phone;
 
 	@Column(nullable = false)
@@ -117,6 +126,30 @@ public class User implements UserDetails {
 		this.department = department;
 	}
 
+	public UUID getDepartmentId() {
+		return departmentId;
+	}
+
+	public void setDepartmentId(UUID departmentId) {
+		this.departmentId = departmentId;
+	}
+
+	public UUID getServiceId() {
+		return serviceId;
+	}
+
+	public void setServiceId(UUID serviceId) {
+		this.serviceId = serviceId;
+	}
+
+	public String getServiceName() {
+		return serviceName;
+	}
+
+	public void setServiceName(String serviceName) {
+		this.serviceName = serviceName;
+	}
+
 	public String getPhone() {
 		return phone;
 	}
@@ -164,6 +197,6 @@ public class User implements UserDetails {
 
 	@Override
 	public boolean isEnabled() {
-		return true;
+		return active;
 	}
 }

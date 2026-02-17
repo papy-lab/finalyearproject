@@ -6,8 +6,18 @@ import { api, SystemSettingsResponse } from "@/lib/api";
 export default function AdminSettings() {
   const [settings, setSettings] = useState<SystemSettingsResponse | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const parsePositiveInt = (value: string, fallback: number) => {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      return fallback;
+    }
+    return parsed;
+  };
 
   const handleChange = (field: string, value: any) => {
     setSettings((prev) => {
@@ -20,12 +30,24 @@ export default function AdminSettings() {
       };
     });
     setSaved(false);
+    setError(null);
   };
 
   const handleSave = async () => {
-    if (!settings) {
+    if (!settings || saving) {
       return;
     }
+    if (!settings.systemName.trim()) {
+      setError("System name is required.");
+      return;
+    }
+    if (!settings.supportEmail.trim()) {
+      setError("Support email is required.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
     const { updatedAt, ...payload } = settings;
     try {
       const updated = await api.updateSettings(payload);
@@ -33,19 +55,27 @@ export default function AdminSettings() {
       setLastUpdated(updated.updatedAt);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch {
+    } catch (err) {
       setSaved(false);
+      setError(err instanceof Error ? err.message : "Failed to save settings.");
+    } finally {
+      setSaving(false);
     }
   };
 
   useEffect(() => {
     const loadSettings = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const data = await api.getSettings();
         setSettings(data);
         setLastUpdated(data.updatedAt);
-      } catch {
+      } catch (err) {
         setSettings(null);
+        setError(err instanceof Error ? err.message : "Failed to load settings.");
+      } finally {
+        setLoading(false);
       }
     };
     loadSettings();
@@ -66,6 +96,17 @@ export default function AdminSettings() {
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
               <CheckCircle2 className="h-5 w-5 text-rra-green" />
               <span className="text-sm font-medium text-rra-green">Settings saved successfully!</span>
+            </div>
+          )}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <span className="text-sm font-medium text-red-700">{error}</span>
+            </div>
+          )}
+          {loading && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <span className="text-sm font-medium text-rra-blue">Loading system settings...</span>
             </div>
           )}
 
@@ -103,7 +144,9 @@ export default function AdminSettings() {
                   <input
                     type="number"
                     value={settings?.maxAppointmentsPerDay ?? 0}
-                    onChange={(e) => handleChange("maxAppointmentsPerDay", parseInt(e.target.value))}
+                    onChange={(e) =>
+                      handleChange("maxAppointmentsPerDay", parsePositiveInt(e.target.value, settings?.maxAppointmentsPerDay ?? 1))
+                    }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
                   />
                 </div>
@@ -112,7 +155,9 @@ export default function AdminSettings() {
                   <input
                     type="number"
                     value={settings?.appointmentDuration ?? 0}
-                    onChange={(e) => handleChange("appointmentDuration", parseInt(e.target.value))}
+                    onChange={(e) =>
+                      handleChange("appointmentDuration", parsePositiveInt(e.target.value, settings?.appointmentDuration ?? 1))
+                    }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
                   />
                 </div>
@@ -234,7 +279,9 @@ export default function AdminSettings() {
                 <input
                   type="number"
                   value={settings?.passwordExpiry ?? 0}
-                  onChange={(e) => handleChange("passwordExpiry", parseInt(e.target.value))}
+                  onChange={(e) =>
+                    handleChange("passwordExpiry", parsePositiveInt(e.target.value, settings?.passwordExpiry ?? 1))
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none"
                 />
                 <p className="text-xs text-gray-600 mt-2">
@@ -251,9 +298,10 @@ export default function AdminSettings() {
             </div>
             <button
               onClick={handleSave}
+              disabled={loading || saving || !settings}
               className="bg-rra-blue text-white px-6 py-2 rounded-lg hover:opacity-90 transition font-medium"
             >
-              Save Changes
+              {saving ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>

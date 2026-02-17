@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, Calendar, Clock, Bell, BarChart3, User, Menu, ChevronDown } from "lucide-react";
+import { LogOut, Calendar, Clock, BarChart3, User, Menu, ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "react-router-dom";
@@ -149,17 +149,6 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
             >
               <Clock className="h-5 w-5" />
               Book Appointment
-            </Link>
-            <Link
-              to="/notifications"
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                isActive("/notifications")
-                  ? "bg-rra-blue text-white font-medium"
-                  : "hover:bg-blue-900"
-              }`}
-            >
-              <Bell className="h-5 w-5" />
-              Notifications
             </Link>
             <Link
               to="/reports"
