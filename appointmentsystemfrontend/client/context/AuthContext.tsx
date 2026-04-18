@@ -4,6 +4,7 @@ import {
   useEffect,
   useState,
   ReactNode,
+  useRef,
 } from "react";
 import {
   api,
@@ -90,9 +91,7 @@ interface AuthContextType {
     message?: string;
     error?: string;
   }>;
-  loginWithGoogle: (
-    idToken: string,
-  ) => Promise<{
+  loginWithGoogle: (idToken: string) => Promise<{
     ok: boolean;
     requiresOtp?: boolean;
     message?: string;
@@ -134,6 +133,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [pendingSignupUser, setPendingSignupUser] =
     useState<PendingSignupUser | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const SESSION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+  const resetSessionTimeout = () => {
+    // Clear existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // Only set timeout if user is logged in
+    if (localStorage.getItem("rra_token")) {
+      timeoutRef.current = setTimeout(() => {
+        // Logout due to inactivity
+        logout();
+        window.location.href = "/login";
+      }, SESSION_TIMEOUT_MS);
+    }
+  };
 
   const applyAuth = (response: AuthResponse) => {
     if (!response.token) {
@@ -150,6 +167,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(newUser);
     localStorage.setItem("rra_user", JSON.stringify(newUser));
     localStorage.setItem("rra_token", response.token);
+    // Reset session timeout on successful login
+    resetSessionTimeout();
   };
 
   const startOtpChallenge = (response: AuthResponse) => {
@@ -312,6 +331,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setPendingSignupUser(null);
     localStorage.removeItem("rra_user");
     localStorage.removeItem("rra_token");
+
+    // Clear the session timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
   };
 
   const signup = async (
@@ -443,12 +468,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           phone: profile.phone ?? undefined,
         };
         setUser(newUser);
+        // Initialize session timeout for existing session
+        resetSessionTimeout();
       })
       .catch(() => {
         logout();
       })
       .finally(() => setInitialized(true));
   }, []);
+
+  // Set up session timeout listeners
+  useEffect(() => {
+    if (!user) {
+      // No user logged in, don't set up listeners
+      return;
+    }
+
+    // Activity events that should reset the timeout
+    const activityEvents = [
+      "mousedown",
+      "keydown",
+      "scroll",
+      "touchstart",
+      "click",
+    ];
+
+    const handleActivity = () => {
+      resetSessionTimeout();
+    };
+
+    // Add event listeners
+    activityEvents.forEach((event) => {
+      document.addEventListener(event, handleActivity);
+    });
+
+    // Initialize the timeout
+    resetSessionTimeout();
+
+    // Cleanup
+    return () => {
+      activityEvents.forEach((event) => {
+        document.removeEventListener(event, handleActivity);
+      });
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [user]);
 
   const value: AuthContextType = {
     user,

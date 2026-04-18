@@ -1,5 +1,15 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, Calendar, Clock, BarChart3, User, Menu, ChevronDown, Award, MessageSquare } from "lucide-react";
+import {
+  LogOut,
+  Calendar,
+  Clock,
+  BarChart3,
+  User,
+  Menu,
+  ChevronDown,
+  Award,
+  MessageSquare,
+} from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "react-router-dom";
@@ -19,7 +29,10 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     }
@@ -55,7 +68,9 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                 alt="RRA Logo"
                 className="h-8"
               />
-              <h1 className="hidden sm:block text-lg font-bold text-rra-navy">RRA Appointments</h1>
+              <h1 className="hidden sm:block text-lg font-bold text-rra-navy">
+                RRA Appointments
+              </h1>
             </div>
           </div>
 
@@ -67,7 +82,11 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                 className="hidden sm:flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-100 px-3 py-2 rounded-lg transition"
               >
                 <div className="flex items-center justify-center w-8 h-8 bg-rra-navy text-white rounded-full text-xs font-bold">
-                  {user?.fullName?.split(" ").map(n => n[0]).join("").toUpperCase() || "U"}
+                  {user?.fullName
+                    ?.split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase() || "U"}
                 </div>
                 <span>{user?.fullName}</span>
                 <ChevronDown className="h-4 w-4" />
@@ -77,8 +96,12 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
               {dropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                   <div className="px-4 py-3 border-b border-gray-200">
-                    <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
-                    <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {user?.fullName}
+                    </p>
+                    <p className="text-xs text-gray-500 capitalize">
+                      {user?.role}
+                    </p>
                   </div>
                   <nav className="py-2">
                     <Link
@@ -132,9 +155,12 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                   ? "bg-rra-blue text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
+              title="Dashboard"
             >
-              <Calendar className="h-5 w-5" />
-              Dashboard
+              <Calendar className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Dashboard
+              </span>
             </Link>
             <Link
               to="/appointments"
@@ -143,9 +169,12 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                   ? "bg-rra-blue text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
+              title="My Appointments"
             >
-              <Clock className="h-5 w-5" />
-              My Appointments
+              <Clock className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                My Appointments
+              </span>
             </Link>
             <Link
               to="/services"
@@ -154,9 +183,12 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                   ? "bg-rra-blue text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
+              title="Services"
             >
-              <Award className="h-5 w-5" />
-              Services
+              <Award className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Services
+              </span>
             </Link>
             <Link
               to="/feedback"
@@ -165,9 +197,12 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                   ? "bg-rra-blue text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
+              title="Feedback"
             >
-              <MessageSquare className="h-5 w-5" />
-              Feedback
+              <MessageSquare className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Feedback
+              </span>
             </Link>
             <Link
               to="/profile"
@@ -176,15 +211,20 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                   ? "bg-rra-blue text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
+              title="Profile"
             >
-              <User className="h-5 w-5" />
-              Profile
+              <User className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Profile
+              </span>
             </Link>
           </nav>
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-0"} h-[calc(100vh-64px)] overflow-y-auto`}>
+        <main
+          className={`flex-1 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-0"} h-[calc(100vh-64px)] overflow-y-auto`}
+        >
           {children}
         </main>
       </div>
@@ -194,8 +234,13 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
             <div className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Confirm Logout</h2>
-              <p className="text-gray-600 mb-6">Are you sure you want to logout? Any unsaved changes will be lost.</p>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Confirm Logout
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to logout? Any unsaved changes will be
+                lost.
+              </p>
 
               <div className="flex gap-3">
                 <button

@@ -1,5 +1,17 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, Users, Calendar, BarChart3, Settings, Menu, ChevronDown, UserRound, Building2, Briefcase } from "lucide-react";
+import {
+  LogOut,
+  Users,
+  Calendar,
+  BarChart3,
+  Settings,
+  Menu,
+  ChevronDown,
+  UserRound,
+  Building2,
+  Briefcase,
+  MessageCircle,
+} from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "react-router-dom";
@@ -19,7 +31,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     }
@@ -68,7 +83,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 alt="RRA Logo"
                 className="h-8"
               />
-              <h1 className="hidden sm:block text-lg font-bold text-rra-navy">RRA Admin Panel</h1>
+              <h1 className="hidden sm:block text-lg font-bold text-rra-navy">
+                RRA Admin Panel
+              </h1>
             </div>
           </div>
 
@@ -80,10 +97,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 className="hidden sm:flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-100 px-3 py-2 rounded-lg transition"
               >
                 <div className="flex items-center justify-center w-8 h-8 bg-rra-navy text-white rounded-full text-xs font-bold">
-                  {user?.fullName?.split(" ").map(n => n[0]).join("").toUpperCase() || "A"}
+                  {user?.fullName
+                    ?.split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase() || "A"}
                 </div>
                 <span>{user?.fullName}</span>
-                <span className="text-xs bg-blue-100 text-rra-blue px-2 py-1 rounded-full">Admin</span>
+                <span className="text-xs bg-blue-100 text-rra-blue px-2 py-1 rounded-full">
+                  Admin
+                </span>
                 <ChevronDown className="h-4 w-4" />
               </button>
 
@@ -91,7 +114,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               {dropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                   <div className="px-4 py-3 border-b border-gray-200">
-                    <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {user?.fullName}
+                    </p>
                     <p className="text-xs text-gray-500 capitalize">Admin</p>
                   </div>
                   <nav className="py-2">
@@ -138,9 +163,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   ? "bg-blue-900 text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
+              title="Dashboard"
             >
-              <BarChart3 className="h-5 w-5" />
-              Dashboard
+              <BarChart3 className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Dashboard
+              </span>
             </Link>
             <Link
               to="/admin-appointments"
@@ -149,9 +177,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   ? "bg-blue-900 text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
+              title="All Appointments"
             >
-              <Calendar className="h-5 w-5" />
-              All Appointments
+              <Calendar className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                All Appointments
+              </span>
             </Link>
             <Link
               to="/admin-staff"
@@ -160,9 +191,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   ? "bg-blue-900 text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
+              title="Staff Management"
             >
-              <Users className="h-5 w-5" />
-              Staff Management
+              <Users className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Staff Management
+              </span>
             </Link>
             <Link
               to="/admin-departments"
@@ -171,9 +205,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   ? "bg-blue-900 text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
+              title="Departments"
             >
-              <Building2 className="h-5 w-5" />
-              Departments
+              <Building2 className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Departments
+              </span>
             </Link>
             <Link
               to="/admin-services"
@@ -182,9 +219,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   ? "bg-blue-900 text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
+              title="Services"
             >
-              <Briefcase className="h-5 w-5" />
-              Services
+              <Briefcase className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Services
+              </span>
             </Link>
             <Link
               to="/admin-clients"
@@ -193,9 +233,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   ? "bg-blue-900 text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
+              title="Client Management"
             >
-              <UserRound className="h-5 w-5" />
-              Client Management
+              <UserRound className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Client Management
+              </span>
             </Link>
             <Link
               to="/admin-reports"
@@ -204,9 +247,26 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   ? "bg-blue-900 text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
+              title="Reports & Analytics"
             >
-              <BarChart3 className="h-5 w-5" />
-              Reports & Analytics
+              <BarChart3 className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Reports & Analytics
+              </span>
+            </Link>
+            <Link
+              to="/admin-feedback"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                isActive("/admin-feedback")
+                  ? "bg-blue-900 text-white font-medium"
+                  : "hover:bg-blue-900"
+              }`}
+              title="Feedback & Reviews"
+            >
+              <MessageCircle className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Feedback & Reviews
+              </span>
             </Link>
             <div className="border-t border-blue-800 mt-6 pt-6">
               <Link
@@ -216,16 +276,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     ? "bg-blue-900 text-white font-medium"
                     : "hover:bg-blue-900"
                 }`}
+                title="Settings"
               >
-                <Settings className="h-5 w-5" />
-                Settings
+                <Settings className="h-5 w-5 flex-shrink-0" />
+                <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                  Settings
+                </span>
               </Link>
             </div>
           </nav>
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-0"} h-[calc(100vh-64px)] overflow-y-auto`}>
+        <main
+          className={`flex-1 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-0"} h-[calc(100vh-64px)] overflow-y-auto`}
+        >
           {children}
         </main>
       </div>
@@ -235,8 +300,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
             <div className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Confirm Logout</h2>
-              <p className="text-gray-600 mb-6">Are you sure you want to logout? Any unsaved changes will be lost.</p>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Confirm Logout
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to logout? Any unsaved changes will be
+                lost.
+              </p>
 
               <div className="flex gap-3">
                 <button

@@ -22,6 +22,7 @@ import AdminAppointments from "./pages/dashboards/AdminAppointments";
 import AdminStaffManagement from "./pages/dashboards/AdminStaffManagement";
 import AdminClients from "./pages/dashboards/AdminClients";
 import AdminReports from "./pages/dashboards/AdminReports";
+import AdminFeedback from "./pages/dashboards/AdminFeedback";
 import AdminSettings from "./pages/dashboards/AdminSettings";
 import AdminDepartments from "./pages/dashboards/AdminDepartments";
 import AdminServices from "./pages/dashboards/AdminServices";
@@ -56,15 +57,22 @@ export default function App() {
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/admin-dashboard" element={<AdminDashboard />} />
-              <Route path="/admin-appointments" element={<AdminAppointments />} />
+              <Route
+                path="/admin-appointments"
+                element={<AdminAppointments />}
+              />
               <Route path="/admin-staff" element={<AdminStaffManagement />} />
               <Route path="/admin-clients" element={<AdminClients />} />
               <Route path="/admin-reports" element={<AdminReports />} />
+              <Route path="/admin-feedback" element={<AdminFeedback />} />
               <Route path="/admin-departments" element={<AdminDepartments />} />
               <Route path="/admin-services" element={<AdminServices />} />
               <Route path="/admin-settings" element={<AdminSettings />} />
               <Route path="/staff-dashboard" element={<StaffDashboard />} />
-              <Route path="/staff-appointments" element={<StaffAppointments />} />
+              <Route
+                path="/staff-appointments"
+                element={<StaffAppointments />}
+              />
               <Route path="/staff-hours" element={<StaffHours />} />
               <Route path="/staff-performance" element={<StaffPerformance />} />
               <Route path="/staff-feedback" element={<StaffFeedback />} />

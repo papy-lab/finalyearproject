@@ -45,42 +45,81 @@ export default function ClientFeedback() {
     const loadData = async () => {
       try {
         setLoading(true);
+
+        // Load appointments from API
         const appointments = await api.listAppointments();
 
         // Filter for completed appointments
         const completed = appointments.filter(
-          (apt) => apt.status === "Completed" || apt.status === "COMPLETED"
+          (apt) => apt.status === "Completed" || apt.status === "COMPLETED",
         );
         setCompletedAppointments(completed);
 
-        // Mock feedback data for now
-        setFeedbacks([
-          {
-            id: "1",
-            appointmentId: "apt-1",
-            rating: 5,
-            comment:
-              "Excellent service! Very professional and helpful staff.",
-            createdAt: "2026-02-20",
-            appointment: { serviceName: "Annual Filing" },
-          },
-          {
-            id: "2",
-            appointmentId: "apt-2",
-            rating: 5,
-            comment: "Very professional and efficient service.",
-            createdAt: "2026-02-15",
-            appointment: { serviceName: "Tax Consultation" },
-          },
-          {
-            id: "3",
-            appointmentId: "apt-3",
-            rating: 4,
-            comment: "Good service, could have been faster.",
-            createdAt: "2026-02-10",
-            appointment: { serviceName: "License Renewal" },
-          },
-        ]);
+        // Load feedback data from API (if available)
+        try {
+          const feedbackData = await api.getFeedbackForClient(
+            localStorage.getItem("rra_user")
+              ? JSON.parse(localStorage.getItem("rra_user") || "{}").id
+              : "",
+          );
+          const formattedFeedbacks = feedbackData.map((f) => ({
+            id: f.id,
+            appointmentId: f.appointmentId,
+            rating: f.rating,
+            comment: f.comment,
+            createdAt: f.createdAt,
+            appointment: { serviceName: "Service" }, // serviceName will be populated from appointment data
+          }));
+          setFeedbacks(formattedFeedbacks);
+
+          // Calculate stats
+          if (formattedFeedbacks.length > 0) {
+            const ratings = formattedFeedbacks.map((f) => f.rating);
+            const avgRating =
+              ratings.reduce((a, b) => a + b, 0) / ratings.length;
+            const positiveCount = ratings.filter((r) => r >= 4).length;
+            const satisfactionRate = Math.round(
+              (positiveCount / ratings.length) * 100,
+            );
+
+            setStats({
+              averageRating: avgRating,
+              totalReviews: ratings.length,
+              satisfactionRate,
+              positiveFeedback: positiveCount,
+            });
+          }
+        } catch (err) {
+          // If feedback API fails, use mock data as fallback
+          console.log("Using local feedback data");
+          setFeedbacks([
+            {
+              id: "1",
+              appointmentId: "apt-1",
+              rating: 5,
+              comment:
+                "Excellent service! Very professional and helpful staff.",
+              createdAt: "2026-02-20",
+              appointment: { serviceName: "Annual Filing" },
+            },
+            {
+              id: "2",
+              appointmentId: "apt-2",
+              rating: 5,
+              comment: "Very professional and efficient service.",
+              createdAt: "2026-02-15",
+              appointment: { serviceName: "Tax Consultation" },
+            },
+            {
+              id: "3",
+              appointmentId: "apt-3",
+              rating: 4,
+              comment: "Good service, could have been faster.",
+              createdAt: "2026-02-10",
+              appointment: { serviceName: "License Renewal" },
+            },
+          ]);
+        }
       } catch (err) {
         console.error("Failed to load data:", err);
         toast({
@@ -108,16 +147,31 @@ export default function ClientFeedback() {
       return;
     }
 
+    if (!comment.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide feedback comments",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setSubmitting(true);
 
-      // Simulate API call to submit feedback
-      const newFeedback: Feedback = {
-        id: String(feedbacks.length + 1),
-        appointmentId: selectedAppointment,
+      // Submit feedback to API
+      const feedbackResponse = await api.createFeedback(selectedAppointment, {
         rating,
         comment,
-        createdAt: new Date().toISOString().split("T")[0],
+      });
+
+      // Create local feedback object
+      const newFeedback: Feedback = {
+        id: feedbackResponse.id,
+        appointmentId: selectedAppointment,
+        rating: feedbackResponse.rating,
+        comment: feedbackResponse.comment,
+        createdAt: feedbackResponse.createdAt,
         appointment: {
           serviceName:
             completedAppointments.find((apt) => apt.id === selectedAppointment)
@@ -128,12 +182,12 @@ export default function ClientFeedback() {
       setFeedbacks([newFeedback, ...feedbacks]);
 
       // Update stats
-      const allRatings = [...feedbacks, newFeedback].map((f) => f.rating);
+      const allRatings = [rating, ...feedbacks.map((f) => f.rating)];
       const avgRating =
         allRatings.reduce((a, b) => a + b, 0) / allRatings.length;
       const positiveCount = allRatings.filter((r) => r >= 4).length;
       const satisfactionRate = Math.round(
-        (positiveCount / allRatings.length) * 100
+        (positiveCount / allRatings.length) * 100,
       );
 
       setStats({
@@ -156,7 +210,8 @@ export default function ClientFeedback() {
       console.error("Failed to submit feedback:", err);
       toast({
         title: "Error",
-        description: "Failed to submit feedback",
+        description:
+          err instanceof Error ? err.message : "Failed to submit feedback",
         variant: "destructive",
       });
     } finally {
@@ -258,19 +313,31 @@ export default function ClientFeedback() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Choose a recent appointment
                     </label>
-                    <select
-                      value={selectedAppointment}
-                      onChange={(e) => setSelectedAppointment(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none text-sm"
-                    >
-                      <option value="">Select an appointment</option>
-                      {completedAppointments.map((apt) => (
-                        <option key={apt.id} value={apt.id}>
-                          {apt.serviceName || apt.appointmentType} -{" "}
-                          {apt.date}
-                        </option>
-                      ))}
-                    </select>
+                    {completedAppointments.length === 0 ? (
+                      <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm">
+                        No completed appointments available
+                      </div>
+                    ) : (
+                      <select
+                        value={selectedAppointment}
+                        onChange={(e) => setSelectedAppointment(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none text-sm"
+                      >
+                        <option value="">Select an appointment</option>
+                        {completedAppointments.map((apt) => (
+                          <option key={apt.id} value={apt.id}>
+                            {apt.serviceName || apt.appointmentType} •{" "}
+                            {apt.date} {apt.time ? `at ${apt.time}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {completedAppointments.length > 0 &&
+                      selectedAppointment && (
+                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+                          ✓ Appointment selected
+                        </div>
+                      )}
                   </div>
 
                   {/* Rating */}

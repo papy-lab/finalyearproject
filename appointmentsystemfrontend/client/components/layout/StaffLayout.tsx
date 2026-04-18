@@ -1,5 +1,14 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, Calendar, Clock, Bell, BarChart3, User, Menu, ChevronDown } from "lucide-react";
+import {
+  LogOut,
+  Calendar,
+  Clock,
+  Bell,
+  BarChart3,
+  User,
+  Menu,
+  ChevronDown,
+} from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "react-router-dom";
@@ -19,7 +28,10 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setDropdownOpen(false);
       }
     }
@@ -55,7 +67,9 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
                 alt="RRA Logo"
                 className="h-8"
               />
-              <h1 className="hidden sm:block text-lg font-bold text-rra-navy">RRA Appointments</h1>
+              <h1 className="hidden sm:block text-lg font-bold text-rra-navy">
+                RRA Appointments
+              </h1>
             </div>
           </div>
 
@@ -67,11 +81,17 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
                 className="hidden sm:flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-100 px-3 py-2 rounded-lg transition"
               >
                 <div className="flex items-center justify-center w-8 h-8 bg-rra-green text-white rounded-full text-xs font-bold">
-                  {user?.fullName?.split(" ").map(n => n[0]).join("").toUpperCase() || "S"}
+                  {user?.fullName
+                    ?.split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase() || "S"}
                 </div>
                 <div className="text-left">
                   <span className="text-gray-700">{user?.fullName}</span>
-                  <p className="text-xs text-gray-500">{user?.department || "Staff"}</p>
+                  <p className="text-xs text-gray-500">
+                    {user?.department || "Staff"}
+                  </p>
                 </div>
                 <ChevronDown className="h-4 w-4" />
               </button>
@@ -80,8 +100,12 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
               {dropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                   <div className="px-4 py-3 border-b border-gray-200">
-                    <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
-                    <p className="text-xs text-gray-500 capitalize">{user?.department || "Staff"}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {user?.fullName}
+                    </p>
+                    <p className="text-xs text-gray-500 capitalize">
+                      {user?.department || "Staff"}
+                    </p>
                   </div>
                   <nav className="py-2">
                     <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3">
@@ -127,9 +151,12 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
                   ? "bg-rra-blue text-white font-medium"
                   : "text-gray-100 hover:bg-blue-900"
               }`}
+              title="Dashboard"
             >
-              <Calendar className="h-5 w-5" />
-              Dashboard
+              <Calendar className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Dashboard
+              </span>
             </Link>
             <Link
               to="/staff-appointments"
@@ -138,9 +165,12 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
                   ? "bg-rra-blue text-white font-medium"
                   : "text-gray-100 hover:bg-blue-900"
               }`}
+              title="Appointments"
             >
-              <Clock className="h-5 w-5" />
-              Appointments
+              <Clock className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Appointments
+              </span>
             </Link>
             <Link
               to="/staff-hours"
@@ -149,9 +179,12 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
                   ? "bg-rra-blue text-white font-medium"
                   : "text-gray-100 hover:bg-blue-900"
               }`}
+              title="My Schedule"
             >
-              <Bell className="h-5 w-5" />
-              My Schedule
+              <Bell className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                My Schedule
+              </span>
             </Link>
             <Link
               to="/staff-feedback"
@@ -160,15 +193,20 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
                   ? "bg-rra-blue text-white font-medium"
                   : "text-gray-100 hover:bg-blue-900"
               }`}
+              title="Feedback"
             >
-              <BarChart3 className="h-5 w-5" />
-              Feedback
+              <BarChart3 className="h-5 w-5 flex-shrink-0" />
+              <span className="whitespace-nowrap text-sm md:text-base lg:block">
+                Feedback
+              </span>
             </Link>
           </nav>
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-0"} h-[calc(100vh-64px)] overflow-y-auto`}>
+        <main
+          className={`flex-1 transition-all duration-300 ${sidebarOpen ? "lg:ml-64" : "lg:ml-0"} h-[calc(100vh-64px)] overflow-y-auto`}
+        >
           {children}
         </main>
       </div>
@@ -178,8 +216,13 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
             <div className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Confirm Logout</h2>
-              <p className="text-gray-600 mb-6">Are you sure you want to logout? Any unsaved changes will be lost.</p>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Confirm Logout
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to logout? Any unsaved changes will be
+                lost.
+              </p>
 
               <div className="flex gap-3">
                 <button

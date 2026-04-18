@@ -260,6 +260,23 @@ export interface StaffHoursResponse {
   };
 }
 
+export interface FeedbackResponse {
+  id: string;
+  appointmentId: string;
+  staffId: string;
+  staffName: string;
+  clientId: string;
+  clientName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}
+
+export interface FeedbackRequest {
+  rating: number;
+  comment: string;
+}
+
 export interface ApiError {
   error?: string;
 }
@@ -588,4 +605,18 @@ export const api = {
     ),
   deleteBlockedDate: (id: string) =>
     apiFetch<void>(`/api/staff/schedule/blocked/${id}`, { method: "DELETE" }),
+
+  // Feedback API endpoints
+  createFeedback: (appointmentId: string, payload: FeedbackRequest) =>
+    apiFetch<FeedbackResponse>(`/api/feedback/${appointmentId}`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getFeedbackForStaff: (staffId: string) =>
+    apiFetch<FeedbackResponse[]>(`/api/feedback/staff/${staffId}`),
+  getFeedbackForClient: (clientId: string) =>
+    apiFetch<FeedbackResponse[]>(`/api/feedback/client/${clientId}`),
+  getAllFeedback: () => apiFetch<FeedbackResponse[]>("/api/feedback/all"),
+  getFeedbackByAppointment: (appointmentId: string) =>
+    apiFetch<FeedbackResponse>(`/api/feedback/appointment/${appointmentId}`),
 };
