@@ -23,8 +23,8 @@ public class AnalyticsController {
 
 	@GetMapping("/admin/reports")
 	public ResponseEntity<AdminReportsResponse> adminReports(
-			@RequestParam(defaultValue = "month") String range,
-			@RequestParam(defaultValue = "all") String department) {
+			@RequestParam(name = "range", defaultValue = "month") String range,
+			@RequestParam(name = "department", defaultValue = "all") String department) {
 		requireRole(Role.ADMIN);
 		return ResponseEntity.ok(analyticsService.getAdminReports(range, department));
 	}
@@ -48,7 +48,7 @@ public class AnalyticsController {
 	}
 
 	@GetMapping("/client/history")
-	public ResponseEntity<ClientHistoryResponse> clientHistory(@RequestParam(defaultValue = "2024") int year) {
+	public ResponseEntity<ClientHistoryResponse> clientHistory(@RequestParam(name = "year", defaultValue = "2024") int year) {
 		User client = requireRole(Role.CLIENT);
 		return ResponseEntity.ok(analyticsService.getClientHistory(client, year));
 	}

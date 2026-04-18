@@ -4,7 +4,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -12,25 +15,20 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 @Service
 public class JwtService {
 	private static final Base64.Encoder BASE64_URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
 	private static final Base64.Decoder BASE64_URL_DECODER = Base64.getUrlDecoder();
-	private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+	private static final Pattern SUBJECT_PATTERN = Pattern.compile("\"sub\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"");
+	private static final Pattern EXP_PATTERN = Pattern.compile("\"exp\"\\s*:\\s*(\\d+)");
 
-	private final ObjectMapper objectMapper;
 	private final byte[] secretBytes;
 	private final long expirationMillis;
 
 	public JwtService(@Value("${app.jwt.secret}") String secret,
-			@Value("${app.jwt.expiration}") long expirationMillis,
-			ObjectMapper objectMapper) {
+			@Value("${app.jwt.expiration}") long expirationMillis) {
 		this.secretBytes = secret.getBytes(StandardCharsets.UTF_8);
 		this.expirationMillis = expirationMillis;
-		this.objectMapper = objectMapper;
 	}
 
 	public String generateToken(String subject) {
@@ -91,18 +89,56 @@ public class JwtService {
 	}
 
 	private byte[] serialize(Map<String, Object> data) {
-		try {
-			return objectMapper.writeValueAsBytes(data);
-		} catch (Exception ex) {
-			throw new IllegalStateException("Could not serialize token payload", ex);
-		}
+		String json = toJson(data);
+		return json.getBytes(StandardCharsets.UTF_8);
 	}
 
 	private Map<String, Object> deserialize(byte[] data) {
-		try {
-			return objectMapper.readValue(data, MAP_TYPE);
-		} catch (Exception ex) {
-			throw new IllegalArgumentException("Invalid token payload", ex);
+		String json = new String(data, StandardCharsets.UTF_8);
+		Map<String, Object> payload = new HashMap<>();
+
+		Matcher subjectMatcher = SUBJECT_PATTERN.matcher(json);
+		if (subjectMatcher.find()) {
+			payload.put("sub", unescapeJson(subjectMatcher.group(1)));
 		}
+
+		Matcher expMatcher = EXP_PATTERN.matcher(json);
+		if (expMatcher.find()) {
+			payload.put("exp", Long.parseLong(expMatcher.group(1)));
+		}
+
+		if (!payload.containsKey("sub") || !payload.containsKey("exp")) {
+			throw new IllegalArgumentException("Invalid token payload");
+		}
+
+		return payload;
+	}
+
+	private String toJson(Map<String, Object> data) {
+		StringBuilder json = new StringBuilder("{");
+		boolean first = true;
+		for (Map.Entry<String, Object> entry : data.entrySet()) {
+			if (!first) {
+				json.append(",");
+			}
+			first = false;
+			json.append("\"").append(escapeJson(entry.getKey())).append("\":");
+			Object value = entry.getValue();
+			if (value instanceof Number || value instanceof Boolean) {
+				json.append(value);
+			} else {
+				json.append("\"").append(escapeJson(String.valueOf(value))).append("\"");
+			}
+		}
+		json.append("}");
+		return json.toString();
+	}
+
+	private String escapeJson(String value) {
+		return value.replace("\\", "\\\\").replace("\"", "\\\"");
+	}
+
+	private String unescapeJson(String value) {
+		return value.replace("\\\"", "\"").replace("\\\\", "\\");
 	}
 }

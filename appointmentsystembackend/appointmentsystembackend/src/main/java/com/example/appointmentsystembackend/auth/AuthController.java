@@ -7,10 +7,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
+import java.util.Map;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.appointmentsystembackend.user.User;
@@ -42,6 +45,16 @@ public class AuthController {
 		return ResponseEntity.ok(authService.loginWithGoogle(request));
 	}
 
+	@PostMapping("/verify-otp")
+	public ResponseEntity<AuthResponse> verifyOtp(@Valid @RequestBody OtpVerifyRequest request) {
+		return ResponseEntity.ok(authService.verifyOtp(request));
+	}
+
+	@PostMapping("/resend-otp")
+	public ResponseEntity<Map<String, String>> resendOtp(@Valid @RequestBody OtpResendRequest request) {
+		return ResponseEntity.ok(authService.resendOtp(request));
+	}
+
 	@PostMapping("/forgot-password")
 	public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
 		return ResponseEntity.ok(authService.forgotPassword(request));
@@ -50,6 +63,21 @@ public class AuthController {
 	@PostMapping("/reset-password")
 	public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
 		return ResponseEntity.ok(authService.resetPassword(request));
+	}
+
+	@PostMapping("/verify-signup-otp")
+	public ResponseEntity<AuthResponse> verifySignupOtp(@Valid @RequestBody SignupOtpVerifyRequest request) {
+		return ResponseEntity.ok(authService.verifySignupOtp(request));
+	}
+
+	@PostMapping("/resend-signup-otp")
+	public ResponseEntity<Map<String, String>> resendSignupOtp(@Valid @RequestBody SignupOtpResendRequest request) {
+		return ResponseEntity.ok(authService.resendSignupOtp(request));
+	}
+
+	@GetMapping("/debug/users")
+	public ResponseEntity<Map<String, Object>> debugUsers(@RequestParam(name = "email", required = false) String email) {
+		return ResponseEntity.ok(authService.debugUserInfo(email));
 	}
 
 	@GetMapping("/me")

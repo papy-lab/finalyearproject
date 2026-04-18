@@ -1,5 +1,18 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_BASE_URL = (() => {
+  const configuredUrl = import.meta.env.VITE_API_URL?.trim();
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/+$/, "");
+  }
+
+  if (typeof window !== "undefined" && window.location.port === "5173") {
+    return `${window.location.protocol}//${window.location.hostname}:8080`;
+  }
+
+  return "";
+})();
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+export const API_BASE_URL_INFO =
+  API_BASE_URL || (typeof window !== "undefined" ? window.location.origin : "");
 
 export type ApiUserRole = "client" | "staff" | "admin";
 
@@ -10,7 +23,10 @@ export interface AuthResponse {
   role: ApiUserRole;
   department?: string | null;
   phone?: string | null;
-  token: string;
+  token?: string | null;
+  requiresOtp?: boolean;
+  challengeId?: string | null;
+  message?: string | null;
 }
 
 export interface UserProfile {
@@ -164,7 +180,11 @@ export interface AdminDashboardResponse {
     completionRate: number;
   };
   weeklyTrend: Array<{ day: string; value: number }>;
-  systemStatus: Array<{ name: string; status: string; level: "good" | "warn" | "bad" }>;
+  systemStatus: Array<{
+    name: string;
+    status: string;
+    level: "good" | "warn" | "bad";
+  }>;
   recentActivity: Array<{ event: string; user: string; timeAgo: string }>;
 }
 
@@ -180,7 +200,12 @@ export interface StaffPerformanceResponse {
   serviceBreakdown: Array<{ name: string; count: number; percentage: number }>;
   achievements: Array<{ badge: string; date: string; description: string }>;
   comparisons: Array<{ metric: string; yours: number; average: number }>;
-  recentFeedback: Array<{ client: string; rating: number; comment: string; date: string }>;
+  recentFeedback: Array<{
+    client: string;
+    rating: number;
+    comment: string;
+    date: string;
+  }>;
 }
 
 export interface ClientHistoryResponse {
@@ -211,7 +236,12 @@ export interface ClientHistoryResponse {
 }
 
 export interface StaffHoursResponse {
-  schedule: Array<{ day: string; startTime: string; endTime: string; isWorking: boolean }>;
+  schedule: Array<{
+    day: string;
+    startTime: string;
+    endTime: string;
+    isWorking: boolean;
+  }>;
   blockedDates: Array<{ id: string; date: string; reason?: string | null }>;
   appointments: Array<{
     id: string;
@@ -234,18 +264,44 @@ export interface ApiError {
   error?: string;
 }
 
+export class ApiRequestError extends Error {
+  status: number;
+  url: string;
+  responseBody: string;
+
+  constructor(
+    message: string,
+    status: number,
+    url: string,
+    responseBody: string,
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.url = url;
+    this.responseBody = responseBody;
+  }
+}
+
 export interface MessageResponse {
   message: string;
 }
 
 const getAuthToken = () => localStorage.getItem("rra_token");
 
-async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function apiFetch<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
   const token = getAuthToken();
   const isPublicAuthPath =
     path === "/api/auth/login" ||
     path === "/api/auth/register" ||
     path === "/api/auth/google" ||
+    path === "/api/auth/verify-otp" ||
+    path === "/api/auth/resend-otp" ||
+    path === "/api/auth/verify-signup-otp" ||
+    path === "/api/auth/resend-signup-otp" ||
     path === "/api/auth/forgot-password" ||
     path === "/api/auth/reset-password";
   const headers: Record<string, string> = {
@@ -262,8 +318,20 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   });
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as ApiError;
-    throw new Error(data.error || `Request failed (${response.status})`);
+    const responseBody = await response.text();
+    const data = (() => {
+      try {
+        return JSON.parse(responseBody || "{}") as ApiError;
+      } catch {
+        return {} as ApiError;
+      }
+    })();
+    throw new ApiRequestError(
+      data.error || `Request failed (${response.status})`,
+      response.status,
+      response.url,
+      responseBody,
+    );
   }
 
   if (response.status === 204) {
@@ -283,6 +351,26 @@ export const api = {
     apiFetch<AuthResponse>("/api/auth/google", {
       method: "POST",
       body: JSON.stringify({ idToken }),
+    }),
+  verifyOtp: (challengeId: string, code: string) =>
+    apiFetch<AuthResponse>("/api/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ challengeId, code }),
+    }),
+  resendOtp: (challengeId: string) =>
+    apiFetch<MessageResponse>("/api/auth/resend-otp", {
+      method: "POST",
+      body: JSON.stringify({ challengeId }),
+    }),
+  verifySignupOtp: (challengeId: string, code: string) =>
+    apiFetch<AuthResponse>("/api/auth/verify-signup-otp", {
+      method: "POST",
+      body: JSON.stringify({ challengeId, code }),
+    }),
+  resendSignupOtp: (challengeId: string) =>
+    apiFetch<MessageResponse>("/api/auth/resend-signup-otp", {
+      method: "POST",
+      body: JSON.stringify({ challengeId }),
     }),
   register: (payload: {
     email: string;
@@ -323,20 +411,24 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
-  updateAppointment: (id: string, payload: Partial<{
-    status: string;
-    date: string;
-    time: string;
-    location: string;
-    notes: string;
-    staffId: string;
-  }>) =>
+  updateAppointment: (
+    id: string,
+    payload: Partial<{
+      status: string;
+      date: string;
+      time: string;
+      location: string;
+      notes: string;
+      staffId: string;
+    }>,
+  ) =>
     apiFetch<AppointmentResponse>(`/api/appointments/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     }),
 
-  listNotifications: () => apiFetch<NotificationResponse[]>("/api/notifications"),
+  listNotifications: () =>
+    apiFetch<NotificationResponse[]>("/api/notifications"),
   markNotificationRead: (id: string) =>
     apiFetch<NotificationResponse>(`/api/notifications/${id}/read`, {
       method: "PATCH",
@@ -368,7 +460,7 @@ export const api = {
       department?: string;
       phone?: string;
       active?: boolean;
-    }
+    },
   ) =>
     apiFetch<StaffResponse>(`/api/staff/${id}`, {
       method: "PATCH",
@@ -394,7 +486,7 @@ export const api = {
       name: string;
       description?: string;
       type: "OPERATIONAL" | "SUPPORT";
-    }
+    },
   ) =>
     apiFetch<DepartmentResponse>(`/api/departments/${id}`, {
       method: "PUT",
@@ -427,7 +519,7 @@ export const api = {
       departmentId: string;
       requirements?: string;
       active?: boolean;
-    }
+    },
   ) =>
     apiFetch<ServiceCatalogResponse>(`/api/services/${id}`, {
       method: "PUT",
@@ -456,14 +548,22 @@ export const api = {
     }),
 
   getAdminReports: (range: string, department: string) =>
-    apiFetch<AdminReportsResponse>(`/api/analytics/admin/reports?range=${range}&department=${department}`),
-  getAdminDashboard: () => apiFetch<AdminDashboardResponse>("/api/analytics/admin/dashboard"),
-  getStaffPerformance: () => apiFetch<StaffPerformanceResponse>("/api/analytics/staff/performance"),
+    apiFetch<AdminReportsResponse>(
+      `/api/analytics/admin/reports?range=${range}&department=${department}`,
+    ),
+  getAdminDashboard: () =>
+    apiFetch<AdminDashboardResponse>("/api/analytics/admin/dashboard"),
+  getStaffPerformance: () =>
+    apiFetch<StaffPerformanceResponse>("/api/analytics/staff/performance"),
   getClientHistory: (year: number) =>
-    apiFetch<ClientHistoryResponse>(`/api/analytics/client/history?year=${year}`),
-  getStaffHours: () => apiFetch<StaffHoursResponse>("/api/analytics/staff/hours"),
+    apiFetch<ClientHistoryResponse>(
+      `/api/analytics/client/history?year=${year}`,
+    ),
+  getStaffHours: () =>
+    apiFetch<StaffHoursResponse>("/api/analytics/staff/hours"),
 
-  getStaffSchedule: () => apiFetch<StaffHoursResponse["schedule"]>("/api/staff/schedule"),
+  getStaffSchedule: () =>
+    apiFetch<StaffHoursResponse["schedule"]>("/api/staff/schedule"),
   updateStaffSchedule: (payload: StaffHoursResponse["schedule"]) =>
     apiFetch<StaffHoursResponse["schedule"]>("/api/staff/schedule", {
       method: "PUT",
@@ -473,15 +573,19 @@ export const api = {
           startTime: entry.startTime,
           endTime: entry.endTime,
           isWorking: entry.isWorking,
-        }))
+        })),
       ),
     }),
-  listBlockedDates: () => apiFetch<StaffHoursResponse["blockedDates"]>("/api/staff/schedule/blocked"),
+  listBlockedDates: () =>
+    apiFetch<StaffHoursResponse["blockedDates"]>("/api/staff/schedule/blocked"),
   addBlockedDate: (payload: { date: string; reason?: string }) =>
-    apiFetch<StaffHoursResponse["blockedDates"][number]>("/api/staff/schedule/blocked", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
+    apiFetch<StaffHoursResponse["blockedDates"][number]>(
+      "/api/staff/schedule/blocked",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    ),
   deleteBlockedDate: (id: string) =>
     apiFetch<void>(`/api/staff/schedule/blocked/${id}`, { method: "DELETE" }),
 };

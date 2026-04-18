@@ -108,4 +108,71 @@ public class EmailService {
 			logger.error("Failed to send password reset code email.", ex);
 		}
 	}
+
+	public void sendLoginOtpEmail(String toEmail, String fullName, String verificationCode) {
+		if (!enabled) {
+			logger.debug("Email notifications disabled; skipping login OTP email.");
+			return;
+		}
+		if (toEmail == null || toEmail.isBlank()) {
+			logger.warn("Login OTP recipient email missing; skipping OTP email.");
+			return;
+		}
+
+		String subject = "Your login verification code";
+		String name = (fullName == null || fullName.isBlank()) ? "User" : fullName;
+		String body = "Hello " + name + ",\n\n"
+				+ "Use this one-time verification code to complete your sign in:\n\n"
+				+ verificationCode + "\n\n"
+				+ "This code will expire in 10 minutes.\n"
+				+ "If you did not try to sign in, please reset your password and contact support.\n";
+
+		SimpleMailMessage message = new SimpleMailMessage();
+		message.setTo(toEmail);
+		message.setSubject(subject);
+		message.setText(body);
+		if (fromAddress != null && !fromAddress.isBlank()) {
+			message.setFrom(fromAddress);
+		}
+
+		try {
+			mailSender.send(message);
+		} catch (RuntimeException ex) {
+			logger.error("Failed to send login OTP email.", ex);
+		}
+	}
+
+	public void sendSignupVerificationEmail(String toEmail, String fullName, String verificationCode) {
+		if (!enabled) {
+			logger.debug("Email notifications disabled; skipping signup verification email.");
+			return;
+		}
+		if (toEmail == null || toEmail.isBlank()) {
+			logger.warn("Signup verification recipient email missing; skipping verification email.");
+			return;
+		}
+
+		String subject = "Verify your RRA appointment system account";
+		String name = (fullName == null || fullName.isBlank()) ? "User" : fullName;
+		String body = "Hello " + name + ",\n\n"
+				+ "Welcome to RRA's appointment system! Please verify your email address to complete your registration.\n\n"
+				+ "Use this verification code:\n\n"
+				+ verificationCode + "\n\n"
+				+ "This code will expire in 10 minutes.\n"
+				+ "If you did not create this account, please ignore this email.\n";
+
+		SimpleMailMessage message = new SimpleMailMessage();
+		message.setTo(toEmail);
+		message.setSubject(subject);
+		message.setText(body);
+		if (fromAddress != null && !fromAddress.isBlank()) {
+			message.setFrom(fromAddress);
+		}
+
+		try {
+			mailSender.send(message);
+		} catch (RuntimeException ex) {
+			logger.error("Failed to send signup verification email.", ex);
+		}
+	}
 }
