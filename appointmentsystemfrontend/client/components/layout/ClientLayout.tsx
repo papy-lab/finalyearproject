@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, Calendar, Clock, BarChart3, User, Menu, ChevronDown } from "lucide-react";
+import { LogOut, Calendar, Clock, BarChart3, User, Menu, ChevronDown, Award, MessageSquare } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "react-router-dom";
@@ -81,14 +81,22 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
                     <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
                   </div>
                   <nav className="py-2">
-                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3">
+                    <Link
+                      to="/profile"
+                      onClick={() => setDropdownOpen(false)}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                    >
                       <User className="h-4 w-4" />
                       Profile
-                    </button>
-                    <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3">
+                    </Link>
+                    <Link
+                      to="/appointments"
+                      onClick={() => setDropdownOpen(false)}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                    >
                       <Calendar className="h-4 w-4" />
                       My Appointments
-                    </button>
+                    </Link>
                   </nav>
                   <div className="border-t border-gray-200 py-2">
                     <button
@@ -137,29 +145,40 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
               }`}
             >
               <Clock className="h-5 w-5" />
-              Appointments
+              My Appointments
             </Link>
             <Link
-              to="/schedule"
+              to="/services"
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                isActive("/schedule")
+                isActive("/services")
                   ? "bg-rra-blue text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
             >
-              <Clock className="h-5 w-5" />
-              Book Appointment
+              <Award className="h-5 w-5" />
+              Services
             </Link>
             <Link
-              to="/reports"
+              to="/feedback"
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                isActive("/reports")
+                isActive("/feedback")
                   ? "bg-rra-blue text-white font-medium"
                   : "hover:bg-blue-900"
               }`}
             >
-              <BarChart3 className="h-5 w-5" />
-              History
+              <MessageSquare className="h-5 w-5" />
+              Feedback
+            </Link>
+            <Link
+              to="/profile"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                isActive("/profile")
+                  ? "bg-rra-blue text-white font-medium"
+                  : "hover:bg-blue-900"
+              }`}
+            >
+              <User className="h-5 w-5" />
+              Profile
             </Link>
           </nav>
         </aside>

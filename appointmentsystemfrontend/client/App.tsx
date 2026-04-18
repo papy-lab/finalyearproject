@@ -30,6 +30,9 @@ import StaffAppointments from "./pages/dashboards/StaffAppointments";
 import StaffHours from "./pages/dashboards/StaffHours";
 import StaffPerformance from "./pages/dashboards/StaffPerformance";
 import StaffFeedback from "./pages/dashboards/StaffFeedback";
+import ClientServices from "./pages/dashboards/ClientServices";
+import ClientFeedback from "./pages/dashboards/ClientFeedback";
+import ClientProfile from "./pages/dashboards/ClientProfile";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +68,9 @@ export default function App() {
               <Route path="/staff-hours" element={<StaffHours />} />
               <Route path="/staff-performance" element={<StaffPerformance />} />
               <Route path="/staff-feedback" element={<StaffFeedback />} />
+              <Route path="/services" element={<ClientServices />} />
+              <Route path="/feedback" element={<ClientFeedback />} />
+              <Route path="/profile" element={<ClientProfile />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
