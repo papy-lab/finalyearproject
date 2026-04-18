@@ -210,16 +210,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setPendingOtpUser(null);
       return { ok: true, requiresOtp: false };
     } catch (error) {
-      if (error instanceof ApiRequestError) {
-        const body = error.responseBody ? ` | body: ${error.responseBody}` : "";
-        return {
-          ok: false,
-          error: `${error.message} | status: ${error.status} | url: ${error.url}${body}`,
-        };
-      }
       return {
         ok: false,
-        error: error instanceof Error ? error.message : "Login failed",
+        error: "Invalid email or password. Please try again.",
       };
     }
   };
@@ -246,16 +239,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setPendingOtpUser(null);
       return { ok: true, requiresOtp: false };
     } catch (error) {
-      if (error instanceof ApiRequestError) {
-        const body = error.responseBody ? ` | body: ${error.responseBody}` : "";
-        return {
-          ok: false,
-          error: `${error.message} | status: ${error.status} | url: ${error.url}${body}`,
-        };
-      }
       return {
         ok: false,
-        error: error instanceof Error ? error.message : "Google login failed",
+        error: "Google login failed. Please try again.",
       };
     }
   };
@@ -276,17 +262,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setPendingOtpUser(null);
       return { ok: true };
     } catch (error) {
-      if (error instanceof ApiRequestError) {
-        const body = error.responseBody ? ` | body: ${error.responseBody}` : "";
-        return {
-          ok: false,
-          error: `${error.message} | status: ${error.status} | url: ${error.url}${body}`,
-        };
-      }
       return {
         ok: false,
-        error:
-          error instanceof Error ? error.message : "OTP verification failed",
+        error: "Invalid or expired verification code. Please try again.",
       };
     }
   };
@@ -307,16 +285,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await api.resendOtp(pendingOtpUser.challengeId);
       return { ok: true, message: response.message };
     } catch (error) {
-      if (error instanceof ApiRequestError) {
-        const body = error.responseBody ? ` | body: ${error.responseBody}` : "";
-        return {
-          ok: false,
-          error: `${error.message} | status: ${error.status} | url: ${error.url}${body}`,
-        };
-      }
       return {
         ok: false,
-        error: error instanceof Error ? error.message : "Failed to resend OTP",
+        error: "Failed to resend code. Please try again.",
       };
     }
   };

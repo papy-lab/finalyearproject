@@ -20,7 +20,7 @@ declare global {
               size?: "large" | "medium" | "small";
               width?: number;
               text?: "signin_with" | "signup_with" | "continue_with" | "signin";
-            }
+            },
           ) => void;
         };
       };
@@ -36,13 +36,22 @@ export default function Login() {
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [resendingOtp, setResendingOtp] = useState(false);
-  const { login, loginWithGoogle, pendingOtpUser, verifyOtp, resendOtp, clearPendingOtp } = useAuth();
+  const {
+    login,
+    loginWithGoogle,
+    pendingOtpUser,
+    verifyOtp,
+    resendOtp,
+    clearPendingOtp,
+  } = useAuth();
   const navigate = useNavigate();
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
   const isOtpStep = !!pendingOtpUser;
 
   const handleMissingGoogleConfig = () => {
-    setError("Google sign-in is not configured yet. Add VITE_GOOGLE_CLIENT_ID in appointmentsystemfrontend/.env");
+    setError(
+      "Google sign-in is not configured yet. Add VITE_GOOGLE_CLIENT_ID in appointmentsystemfrontend/.env",
+    );
   };
 
   useEffect(() => {
@@ -61,7 +70,9 @@ export default function Login() {
       return;
     }
 
-    const existingScript = document.querySelector<HTMLScriptElement>("script[data-google-identity='true']");
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      "script[data-google-identity='true']",
+    );
 
     const initializeGoogle = () => {
       if (!window.google?.accounts?.id || !googleButtonRef.current) {
@@ -78,7 +89,9 @@ export default function Login() {
           const result = await loginWithGoogle(credential);
           if (result.ok) {
             setError("");
-            setSuccess(result.message || "Verification code sent to your email.");
+            setSuccess(
+              result.message || "Verification code sent to your email.",
+            );
             if (!result.requiresOtp) {
               navigate("/dashboard");
             }
@@ -151,7 +164,10 @@ export default function Login() {
       }
       navigate("/dashboard");
     } else {
-      setError(result.error || "Invalid email or password. Please try again or use demo credentials below.");
+      setError(
+        result.error ||
+          "Invalid email or password. Please try again or use demo credentials below.",
+      );
     }
   };
 
@@ -178,7 +194,9 @@ export default function Login() {
               alt="RRA Logo"
               className="h-10 mx-auto mb-2"
             />
-            <h1 className="text-xl font-bold text-rra-navy">{isOtpStep ? "Verify Your Login" : "Welcome Back"}</h1>
+            <h1 className="text-xl font-bold text-rra-navy">
+              {isOtpStep ? "Verify Your Login" : "Welcome Back"}
+            </h1>
             <p className="text-sm text-gray-600 mt-1">
               {isOtpStep
                 ? `Enter the 6-digit code sent to ${pendingOtpUser?.email}.`
@@ -188,7 +206,9 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-3">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">{error}</div>
+              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
+                {error}
+              </div>
             )}
             {success && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm">
@@ -199,7 +219,9 @@ export default function Login() {
             {!isOtpStep ? (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address
+                  </label>
                   <input
                     type="email"
                     value={email}
@@ -210,7 +232,9 @@ export default function Login() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Password
+                  </label>
                   <input
                     type="password"
                     value={password}
@@ -222,10 +246,16 @@ export default function Login() {
 
                 <div className="flex justify-between items-center pt-1">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" className="rounded border-gray-300" />
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300"
+                    />
                     <span className="text-sm text-gray-600">Remember me</span>
                   </label>
-                  <Link to="/forgot-password" className="text-sm text-rra-blue hover:text-rra-navy transition">
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm text-rra-blue hover:text-rra-navy transition"
+                  >
                     Forgot password?
                   </Link>
                 </div>
@@ -235,16 +265,23 @@ export default function Login() {
                 <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-3 text-sm text-blue-900">
                   <div className="flex items-start gap-2">
                     <Mail className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>Every sign in now requires a one-time verification code for extra account security.</span>
+                    <span>
+                      Every sign in now requires a one-time verification code
+                      for extra account security.
+                    </span>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Verification Code</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Verification Code
+                  </label>
                   <input
                     type="text"
                     value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onChange={(e) =>
+                      setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
                     placeholder="6-digit code"
                     inputMode="numeric"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg tracking-[0.35em] text-center text-lg focus:ring-2 focus:ring-rra-blue focus:border-transparent outline-none transition"
@@ -281,8 +318,18 @@ export default function Login() {
               disabled={submitting}
               className="w-full bg-rra-blue text-white py-2 rounded-lg font-semibold hover:bg-rra-navy transition flex items-center justify-center gap-2 mt-3"
             >
-              {isOtpStep ? <KeyRound className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}
-              {submitting ? (isOtpStep ? "Verifying..." : "Signing In...") : isOtpStep ? "Verify Code" : "Sign In"}
+              {isOtpStep ? (
+                <KeyRound className="h-5 w-5" />
+              ) : (
+                <LogIn className="h-5 w-5" />
+              )}
+              {submitting
+                ? isOtpStep
+                  ? "Verifying..."
+                  : "Signing In..."
+                : isOtpStep
+                  ? "Verify Code"
+                  : "Sign In"}
             </button>
 
             {!isOtpStep && (
@@ -304,11 +351,6 @@ export default function Login() {
                 <p className="text-center text-xs text-gray-500 leading-tight">
                   Clients can sign in with Google or email/password.
                 </p>
-                {import.meta.env.DEV && (
-                  <p className="text-center text-[11px] text-gray-400 leading-tight">
-                    Dev API: {API_BASE_URL_INFO || "same-origin"}
-                  </p>
-                )}
               </>
             )}
           </form>
@@ -316,14 +358,20 @@ export default function Login() {
           {!isOtpStep && (
             <p className="text-center mt-4 text-sm text-gray-600">
               Don't have an account?{" "}
-              <Link to="/signup" className="text-rra-blue font-semibold hover:text-rra-navy transition">
+              <Link
+                to="/signup"
+                className="text-rra-blue font-semibold hover:text-rra-navy transition"
+              >
                 Sign up
               </Link>
             </p>
           )}
 
           <div className="text-center mt-2">
-            <Link to="/" className="text-xs text-gray-600 hover:text-rra-blue transition">
+            <Link
+              to="/"
+              className="text-xs text-gray-600 hover:text-rra-blue transition"
+            >
               {"<-"} Back to Home
             </Link>
           </div>
