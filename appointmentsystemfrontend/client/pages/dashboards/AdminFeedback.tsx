@@ -187,7 +187,7 @@ export default function AdminFeedback() {
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <p className="font-semibold text-gray-900">
-                            {feedback.clientName}
+                            {feedback.serviceName || feedback.appointmentType}
                           </p>
                           <p className="text-xs text-gray-600 mt-0.5">
                             {feedback.clientName} - {feedback.staffName}
@@ -229,6 +229,9 @@ export default function AdminFeedback() {
                         Staff
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900">
+                        Service
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900">
                         Rating
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900">
@@ -250,6 +253,9 @@ export default function AdminFeedback() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {feedback.staffName}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {feedback.serviceName || feedback.appointmentType}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex gap-0.5">

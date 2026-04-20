@@ -43,7 +43,7 @@ public class AppointmentController {
 	}
 
 	@PatchMapping("/{id}")
-	public ResponseEntity<AppointmentResponse> update(@PathVariable UUID id,
+	public ResponseEntity<AppointmentResponse> update(@PathVariable("id") UUID id,
 			@RequestBody AppointmentUpdateRequest request) {
 		User user = currentUser();
 		return ResponseEntity.ok(appointmentService.updateAppointment(user, id, request));

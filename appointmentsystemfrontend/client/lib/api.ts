@@ -263,6 +263,10 @@ export interface StaffHoursResponse {
 export interface FeedbackResponse {
   id: string;
   appointmentId: string;
+  serviceName: string;
+  appointmentType: string;
+  appointmentDate: string;
+  appointmentTime: string;
   staffId: string;
   staffName: string;
   clientId: string;
@@ -275,6 +279,25 @@ export interface FeedbackResponse {
 export interface FeedbackRequest {
   rating: number;
   comment: string;
+}
+
+export interface MessageResponse {
+  id: string;
+  appointmentId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: "client" | "staff" | "admin";
+  recipientId?: string;
+  recipientName?: string;
+  subject: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface MessageRequest {
+  subject: string;
+  message: string;
 }
 
 export interface ApiError {
@@ -619,4 +642,22 @@ export const api = {
   getAllFeedback: () => apiFetch<FeedbackResponse[]>("/api/feedback/all"),
   getFeedbackByAppointment: (appointmentId: string) =>
     apiFetch<FeedbackResponse>(`/api/feedback/appointment/${appointmentId}`),
+
+  // Message API endpoints
+  createMessage: (appointmentId: string, payload: MessageRequest) =>
+    apiFetch<MessageResponse>(`/api/messages/${appointmentId}`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getMessagesForAppointment: (appointmentId: string) =>
+    apiFetch<MessageResponse[]>(`/api/messages/appointment/${appointmentId}`),
+  getMessagesForClient: (clientId: string) =>
+    apiFetch<MessageResponse[]>(`/api/messages/client/${clientId}`),
+  getMessagesForStaff: (staffId: string) =>
+    apiFetch<MessageResponse[]>(`/api/messages/staff/${staffId}`),
+  getAllMessages: () => apiFetch<MessageResponse[]>("/api/messages/all"),
+  markMessageRead: (messageId: string) =>
+    apiFetch<MessageResponse>(`/api/messages/${messageId}/read`, {
+      method: "PATCH",
+    }),
 };

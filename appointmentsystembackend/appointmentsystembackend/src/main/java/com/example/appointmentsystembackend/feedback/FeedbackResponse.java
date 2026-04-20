@@ -6,6 +6,10 @@ import java.util.UUID;
 public class FeedbackResponse {
 	private UUID id;
 	private UUID appointmentId;
+	private String serviceName;
+	private String appointmentType;
+	private String appointmentDate;
+	private String appointmentTime;
 	private UUID staffId;
 	private String staffName;
 	private UUID clientId;
@@ -14,10 +18,15 @@ public class FeedbackResponse {
 	private String comment;
 	private OffsetDateTime createdAt;
 
-	public FeedbackResponse(UUID id, UUID appointmentId, UUID staffId, String staffName, UUID clientId,
-			String clientName, int rating, String comment, OffsetDateTime createdAt) {
+	public FeedbackResponse(UUID id, UUID appointmentId, String serviceName, String appointmentType, String appointmentDate,
+			String appointmentTime, UUID staffId, String staffName, UUID clientId, String clientName, int rating,
+			String comment, OffsetDateTime createdAt) {
 		this.id = id;
 		this.appointmentId = appointmentId;
+		this.serviceName = serviceName;
+		this.appointmentType = appointmentType;
+		this.appointmentDate = appointmentDate;
+		this.appointmentTime = appointmentTime;
 		this.staffId = staffId;
 		this.staffName = staffName;
 		this.clientId = clientId;
@@ -28,9 +37,20 @@ public class FeedbackResponse {
 	}
 
 	public static FeedbackResponse from(Feedback feedback) {
-		return new FeedbackResponse(feedback.getId(), feedback.getAppointment().getId(), feedback.getStaff().getId(),
-				feedback.getStaff().getFullName(), feedback.getClient().getId(), feedback.getClient().getFullName(),
-				feedback.getRating(), feedback.getComment(), feedback.getCreatedAt());
+		return new FeedbackResponse(
+				feedback.getId(),
+				feedback.getAppointment().getId(),
+				feedback.getAppointment().getAppointmentType(),
+				feedback.getAppointment().getAppointmentType(),
+				feedback.getAppointment().getDate().toString(),
+				feedback.getAppointment().getTime().toString(),
+				feedback.getStaff().getId(),
+				feedback.getStaff().getFullName(),
+				feedback.getClient().getId(),
+				feedback.getClient().getFullName(),
+				feedback.getRating(),
+				feedback.getComment(),
+				feedback.getCreatedAt());
 	}
 
 	public UUID getId() {
@@ -39,6 +59,22 @@ public class FeedbackResponse {
 
 	public UUID getAppointmentId() {
 		return appointmentId;
+	}
+
+	public String getServiceName() {
+		return serviceName;
+	}
+
+	public String getAppointmentType() {
+		return appointmentType;
+	}
+
+	public String getAppointmentDate() {
+		return appointmentDate;
+	}
+
+	public String getAppointmentTime() {
+		return appointmentTime;
 	}
 
 	public UUID getStaffId() {

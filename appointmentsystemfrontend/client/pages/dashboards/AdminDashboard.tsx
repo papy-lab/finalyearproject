@@ -1,10 +1,11 @@
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { api, AdminDashboardResponse } from "@/lib/api";
+import { api, AdminDashboardResponse, FeedbackResponse } from "@/lib/api";
 
 export default function AdminDashboard() {
   const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null);
+  const [recentFeedback, setRecentFeedback] = useState<FeedbackResponse[]>([]);
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -13,6 +14,13 @@ export default function AdminDashboard() {
         setDashboard(data);
       } catch {
         setDashboard(null);
+      }
+
+      try {
+        const feedback = await api.getAllFeedback();
+        setRecentFeedback(feedback.slice(0, 5));
+      } catch {
+        setRecentFeedback([]);
       }
     };
     loadDashboard();
@@ -124,25 +132,64 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Recent Activity */}
-          <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-rra-navy">Recent Activity</h3>
-                <AlertCircle className="h-5 w-5 text-gray-400" />
+          <div className="mt-8 grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-rra-navy">Recent Activity</h3>
+                  <AlertCircle className="h-5 w-5 text-gray-400" />
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="space-y-3">
+                  {(dashboard?.recentActivity || []).map((activity, idx) => (
+                    <div key={idx} className="flex items-start justify-between py-3 border-b border-gray-100 last:border-b-0">
+                      <div>
+                        <p className="font-medium text-gray-900">{activity.event}</p>
+                        <p className="text-sm text-gray-600">By {activity.user}</p>
+                      </div>
+                      <span className="text-xs text-gray-500 flex-shrink-0">{activity.timeAgo}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-            <div className="p-6">
-              <div className="space-y-3">
-                {(dashboard?.recentActivity || []).map((activity, idx) => (
-                  <div key={idx} className="flex items-start justify-between py-3 border-b border-gray-100 last:border-b-0">
-                    <div>
-                      <p className="font-medium text-gray-900">{activity.event}</p>
-                      <p className="text-sm text-gray-600">By {activity.user}</p>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              <div className="p-6 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-rra-navy">Recent Feedback</h3>
+                <p className="text-sm text-gray-600 mt-1">Latest reviews sent by clients</p>
+              </div>
+              <div className="p-6 space-y-4">
+                {recentFeedback.length > 0 ? (
+                  recentFeedback.map((feedback) => (
+                    <div key={feedback.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-gray-900">{feedback.clientName}</p>
+                          <p className="text-sm text-gray-600">
+                            {feedback.serviceName || feedback.appointmentType}
+                          </p>
+                        </div>
+                        <div className="flex gap-0.5">
+                          {[...Array(5)].map((_, index) => (
+                            <Star
+                              key={index}
+                              className={`h-4 w-4 ${
+                                index < feedback.rating
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-700 mt-3">{feedback.comment}</p>
                     </div>
-                    <span className="text-xs text-gray-500 flex-shrink-0">{activity.timeAgo}</span>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">No feedback available yet.</p>
+                )}
               </div>
             </div>
           </div>

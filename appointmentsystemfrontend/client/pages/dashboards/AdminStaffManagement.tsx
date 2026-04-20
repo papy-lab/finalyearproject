@@ -1,7 +1,23 @@
-import { Plus, Search, Filter, Mail, Phone, UserCheck, UserX, Edit2, Trash2, MoreVertical } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Filter,
+  Mail,
+  Phone,
+  UserCheck,
+  UserX,
+  Edit2,
+  Trash2,
+  MoreVertical,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { api, DepartmentResponse, ServiceCatalogResponse, StaffResponse } from "@/lib/api";
+import {
+  api,
+  DepartmentResponse,
+  ServiceCatalogResponse,
+  StaffResponse,
+} from "@/lib/api";
 
 interface StaffMember {
   id: string;
@@ -35,6 +51,9 @@ export default function AdminStaffManagement() {
   const [statusError, setStatusError] = useState<string | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const [staffToToggleStatus, setStaffToToggleStatus] =
+    useState<StaffMember | null>(null);
+  const [confirmStatusDialogOpen, setConfirmStatusDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -56,12 +75,22 @@ export default function AdminStaffManagement() {
   });
 
   const serviceOptions = useMemo(
-    () => services.filter((service) => !formData.departmentId || service.departmentId === formData.departmentId),
-    [services, formData.departmentId]
+    () =>
+      services.filter(
+        (service) =>
+          !formData.departmentId ||
+          service.departmentId === formData.departmentId,
+      ),
+    [services, formData.departmentId],
   );
   const editServiceOptions = useMemo(
-    () => services.filter((service) => !editFormData.departmentId || service.departmentId === editFormData.departmentId),
-    [services, editFormData.departmentId]
+    () =>
+      services.filter(
+        (service) =>
+          !editFormData.departmentId ||
+          service.departmentId === editFormData.departmentId,
+      ),
+    [services, editFormData.departmentId],
   );
 
   const departmentOptions = departments.map((dept) => dept.name);
@@ -73,13 +102,18 @@ export default function AdminStaffManagement() {
       member.email.toLowerCase().includes(q) ||
       member.phone.toLowerCase().includes(q) ||
       member.service.toLowerCase().includes(q);
-    const matchesDepartment = filterDepartment === "all" || member.department === filterDepartment;
+    const matchesDepartment =
+      filterDepartment === "all" || member.department === filterDepartment;
     return matchesSearch && matchesDepartment;
   });
 
   const activeStaff = staff.filter((s) => s.status === "active").length;
-  const totalAppointments = staff.reduce((sum, s) => sum + s.appointmentsHandled, 0);
-  const avgAppointments = staff.length > 0 ? Math.round(totalAppointments / staff.length) : 0;
+  const totalAppointments = staff.reduce(
+    (sum, s) => sum + s.appointmentsHandled,
+    0,
+  );
+  const avgAppointments =
+    staff.length > 0 ? Math.round(totalAppointments / staff.length) : 0;
 
   useEffect(() => {
     const loadData = async () => {
@@ -108,7 +142,7 @@ export default function AdminStaffManagement() {
             position: "Staff Member",
             status: member.status === "active" ? "active" : "inactive",
             appointmentsHandled: member.appointmentsHandled ?? 0,
-          }))
+          })),
         );
       } catch {
         setStaff([]);
@@ -120,7 +154,13 @@ export default function AdminStaffManagement() {
   }, []);
 
   const handleAddStaff = async () => {
-    if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.position) {
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.phone ||
+      !formData.password ||
+      !formData.position
+    ) {
       setAddError("Please fill in all required fields.");
       return;
     }
@@ -131,7 +171,9 @@ export default function AdminStaffManagement() {
     try {
       setAddLoading(true);
       setAddError(null);
-      const selectedDepartment = departments.find((d) => d.id === formData.departmentId);
+      const selectedDepartment = departments.find(
+        (d) => d.id === formData.departmentId,
+      );
       const selectedService = services.find((s) => s.id === formData.serviceId);
       const created = await api.createStaff({
         email: formData.email,
@@ -149,9 +191,12 @@ export default function AdminStaffManagement() {
           name: created.fullName,
           email: created.email,
           phone: created.phone || formData.phone,
-          department: created.department || selectedDepartment?.name || "General",
-          departmentId: created.departmentId || formData.departmentId || undefined,
-          service: created.serviceName || selectedService?.name || "Not assigned",
+          department:
+            created.department || selectedDepartment?.name || "General",
+          departmentId:
+            created.departmentId || formData.departmentId || undefined,
+          service:
+            created.serviceName || selectedService?.name || "Not assigned",
           serviceId: created.serviceId || formData.serviceId || undefined,
           position: formData.position,
           status: created.status === "active" ? "active" : "inactive",
@@ -169,7 +214,9 @@ export default function AdminStaffManagement() {
       });
       setAddModalOpen(false);
     } catch (error) {
-      setAddError(error instanceof Error ? error.message : "Failed to add staff member");
+      setAddError(
+        error instanceof Error ? error.message : "Failed to add staff member",
+      );
     } finally {
       setAddLoading(false);
     }
@@ -198,8 +245,12 @@ export default function AdminStaffManagement() {
     try {
       setEditLoading(true);
       setEditError(null);
-      const selectedDepartment = departments.find((d) => d.id === editFormData.departmentId);
-      const selectedService = services.find((s) => s.id === editFormData.serviceId);
+      const selectedDepartment = departments.find(
+        (d) => d.id === editFormData.departmentId,
+      );
+      const selectedService = services.find(
+        (s) => s.id === editFormData.serviceId,
+      );
       const updated = await api.updateStaff(editFormData.id, {
         fullName: editFormData.name,
         email: editFormData.email,
@@ -217,19 +268,31 @@ export default function AdminStaffManagement() {
                 name: updated.fullName,
                 email: updated.email,
                 phone: updated.phone || "N/A",
-                department: updated.department || selectedDepartment?.name || "General",
-                departmentId: updated.departmentId || editFormData.departmentId || undefined,
-                service: updated.serviceName || selectedService?.name || "Not assigned",
-                serviceId: updated.serviceId || editFormData.serviceId || undefined,
+                department:
+                  updated.department || selectedDepartment?.name || "General",
+                departmentId:
+                  updated.departmentId ||
+                  editFormData.departmentId ||
+                  undefined,
+                service:
+                  updated.serviceName ||
+                  selectedService?.name ||
+                  "Not assigned",
+                serviceId:
+                  updated.serviceId || editFormData.serviceId || undefined,
                 position: editFormData.position,
                 status: updated.status === "active" ? "active" : "inactive",
               }
-            : s
-        )
+            : s,
+        ),
       );
       setEditModalOpen(false);
     } catch (error) {
-      setEditError(error instanceof Error ? error.message : "Failed to update staff member");
+      setEditError(
+        error instanceof Error
+          ? error.message
+          : "Failed to update staff member",
+      );
     } finally {
       setEditLoading(false);
     }
@@ -255,32 +318,49 @@ export default function AdminStaffManagement() {
         error instanceof Error && error.message.includes("403")
           ? "Access denied. Please login as admin to delete staff."
           : error instanceof Error
-          ? error.message
-          : "Failed to delete staff member";
+            ? error.message
+            : "Failed to delete staff member";
       setDeleteError(message);
     } finally {
       setDeletingStaffId(null);
     }
   };
 
-  const handleToggleStatus = async (member: StaffMember) => {
+  const openConfirmStatusDialog = (member: StaffMember) => {
     setOpenActionMenuId(null);
-    const nextActive = member.status !== "active";
+    setStaffToToggleStatus(member);
+    setConfirmStatusDialogOpen(true);
+  };
+
+  const handleToggleStatus = async () => {
+    if (!staffToToggleStatus) return;
+
+    const nextActive = staffToToggleStatus.status !== "active";
     try {
       setStatusError(null);
-      setUpdatingStatusId(member.id);
-      const updated = await api.updateStaff(member.id, {
-        fullName: member.name,
-        email: member.email,
-        phone: member.phone === "N/A" ? undefined : member.phone,
-        departmentId: member.departmentId,
-        department: member.department,
-        serviceId: member.serviceId,
+      setUpdatingStatusId(staffToToggleStatus.id);
+      console.log(
+        "Toggling staff status:",
+        staffToToggleStatus.id,
+        "to active:",
+        nextActive,
+      );
+      const updated = await api.updateStaff(staffToToggleStatus.id, {
+        fullName: staffToToggleStatus.name,
+        email: staffToToggleStatus.email,
+        phone:
+          staffToToggleStatus.phone === "N/A"
+            ? undefined
+            : staffToToggleStatus.phone,
+        departmentId: staffToToggleStatus.departmentId,
+        department: staffToToggleStatus.department,
+        serviceId: staffToToggleStatus.serviceId,
         active: nextActive,
       });
+      console.log("Staff status updated:", updated);
       setStaff((prev) =>
         prev.map((s) =>
-          s.id === member.id
+          s.id === staffToToggleStatus.id
             ? {
                 ...s,
                 name: updated.fullName,
@@ -292,16 +372,19 @@ export default function AdminStaffManagement() {
                 serviceId: updated.serviceId || s.serviceId,
                 status: updated.status === "active" ? "active" : "inactive",
               }
-            : s
-        )
+            : s,
+        ),
       );
+      setConfirmStatusDialogOpen(false);
+      setStaffToToggleStatus(null);
     } catch (error) {
+      console.error("Error toggling status:", error);
       const message =
         error instanceof Error && error.message.includes("403")
           ? "Access denied. Please login as admin to update staff status."
           : error instanceof Error
-          ? error.message
-          : "Failed to update staff status";
+            ? error.message
+            : "Failed to update staff status";
       setStatusError(message);
     } finally {
       setUpdatingStatusId(null);
@@ -330,8 +413,12 @@ export default function AdminStaffManagement() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-rra-navy mb-2">Staff Management</h2>
-              <p className="text-gray-600">Manage staff department and service assignments</p>
+              <h2 className="text-3xl font-bold text-rra-navy mb-2">
+                Staff Management
+              </h2>
+              <p className="text-gray-600">
+                Manage staff department and service assignments
+              </p>
             </div>
             <button
               onClick={() => {
@@ -347,10 +434,26 @@ export default function AdminStaffManagement() {
 
           <div className="grid md:grid-cols-4 gap-4 mb-8">
             {[
-              { label: "Total Staff", value: staff.length, color: "bg-blue-50 text-rra-blue" },
-              { label: "Active", value: activeStaff, color: "bg-green-50 text-rra-green" },
-              { label: "Total Appointments", value: totalAppointments, color: "bg-purple-50 text-purple-600" },
-              { label: "Avg per Staff", value: avgAppointments, color: "bg-orange-50 text-rra-gold" },
+              {
+                label: "Total Staff",
+                value: staff.length,
+                color: "bg-blue-50 text-rra-blue",
+              },
+              {
+                label: "Active",
+                value: activeStaff,
+                color: "bg-green-50 text-rra-green",
+              },
+              {
+                label: "Total Appointments",
+                value: totalAppointments,
+                color: "bg-purple-50 text-purple-600",
+              },
+              {
+                label: "Avg per Staff",
+                value: avgAppointments,
+                color: "bg-orange-50 text-rra-gold",
+              },
             ].map((stat) => (
               <div key={stat.label} className={`${stat.color} rounded-xl p-6`}>
                 <p className="text-sm font-medium opacity-75">{stat.label}</p>
@@ -405,15 +508,24 @@ export default function AdminStaffManagement() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
             <div className="md:hidden p-4 space-y-3">
               {filteredStaff.map((member) => (
-                <div key={member.id} className="border border-gray-200 rounded-lg p-4">
+                <div
+                  key={member.id}
+                  className="border border-gray-200 rounded-lg p-4"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-gray-900">{member.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">{member.position}</p>
+                      <p className="font-semibold text-gray-900">
+                        {member.name}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {member.position}
+                      </p>
                     </div>
                     <span
                       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                        member.status === "active" ? "bg-green-100 text-rra-green" : "bg-red-100 text-red-600"
+                        member.status === "active"
+                          ? "bg-green-100 text-rra-green"
+                          : "bg-red-100 text-red-600"
                       }`}
                     >
                       <UserCheck className="h-3.5 w-3.5" />
@@ -435,9 +547,16 @@ export default function AdminStaffManagement() {
                     <p>Appointments: {member.appointmentsHandled}</p>
                   </div>
 
-                  <div className="mt-4 flex justify-end relative" data-staff-action-menu>
+                  <div
+                    className="mt-4 flex justify-end relative"
+                    data-staff-action-menu
+                  >
                     <button
-                      onClick={() => setOpenActionMenuId((prev) => (prev === member.id ? null : member.id))}
+                      onClick={() =>
+                        setOpenActionMenuId((prev) =>
+                          prev === member.id ? null : member.id,
+                        )
+                      }
                       className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
                       title="Open actions"
                     >
@@ -446,12 +565,20 @@ export default function AdminStaffManagement() {
                     {openActionMenuId === member.id && (
                       <div className="absolute right-0 top-10 z-30 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
                         <button
-                          onClick={() => handleToggleStatus(member)}
+                          onClick={() => openConfirmStatusDialog(member)}
                           disabled={updatingStatusId === member.id}
                           className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-60 flex items-center gap-2"
                         >
-                          {member.status === "active" ? <UserX className="h-4 w-4 text-red-600" /> : <UserCheck className="h-4 w-4 text-green-600" />}
-                          {updatingStatusId === member.id ? "Updating..." : member.status === "active" ? "Deactivate" : "Activate"}
+                          {member.status === "active" ? (
+                            <UserX className="h-4 w-4 text-red-600" />
+                          ) : (
+                            <UserCheck className="h-4 w-4 text-green-600" />
+                          )}
+                          {updatingStatusId === member.id
+                            ? "Updating..."
+                            : member.status === "active"
+                              ? "Deactivate"
+                              : "Activate"}
                         </button>
                         <button
                           onClick={() => openEditFromMenu(member)}
@@ -488,21 +615,42 @@ export default function AdminStaffManagement() {
                 </colgroup>
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">Name</th>
-                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">Contact</th>
-                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">Department</th>
-                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">Service</th>
-                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">Position</th>
-                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">Appointments</th>
-                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">Status</th>
-                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">Actions</th>
+                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">
+                      Name
+                    </th>
+                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">
+                      Contact
+                    </th>
+                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">
+                      Department
+                    </th>
+                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">
+                      Service
+                    </th>
+                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">
+                      Position
+                    </th>
+                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">
+                      Appointments
+                    </th>
+                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">
+                      Status
+                    </th>
+                    <th className="px-3 lg:px-4 py-4 text-left text-xs lg:text-sm font-semibold text-gray-900">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredStaff.map((member) => (
-                    <tr key={member.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                    <tr
+                      key={member.id}
+                      className="border-b border-gray-200 hover:bg-gray-50 transition"
+                    >
                       <td className="px-3 lg:px-4 py-4 align-top">
-                        <p className="font-medium text-gray-900 text-sm break-words">{member.name}</p>
+                        <p className="font-medium text-gray-900 text-sm break-words">
+                          {member.name}
+                        </p>
                       </td>
                       <td className="px-3 lg:px-4 py-4 align-top">
                         <p className="flex items-start gap-2 text-gray-600 text-xs lg:text-sm">
@@ -514,14 +662,24 @@ export default function AdminStaffManagement() {
                           <span className="break-all">{member.phone}</span>
                         </p>
                       </td>
-                      <td className="px-3 lg:px-4 py-4 text-gray-700 text-xs lg:text-sm break-words align-top">{member.department}</td>
-                      <td className="px-3 lg:px-4 py-4 text-gray-700 text-xs lg:text-sm break-words align-top">{member.service}</td>
-                      <td className="px-3 lg:px-4 py-4 text-gray-700 text-xs lg:text-sm break-words align-top">{member.position}</td>
-                      <td className="px-3 lg:px-4 py-4 text-gray-700 text-xs lg:text-sm align-top">{member.appointmentsHandled}</td>
+                      <td className="px-3 lg:px-4 py-4 text-gray-700 text-xs lg:text-sm break-words align-top">
+                        {member.department}
+                      </td>
+                      <td className="px-3 lg:px-4 py-4 text-gray-700 text-xs lg:text-sm break-words align-top">
+                        {member.service}
+                      </td>
+                      <td className="px-3 lg:px-4 py-4 text-gray-700 text-xs lg:text-sm break-words align-top">
+                        {member.position}
+                      </td>
+                      <td className="px-3 lg:px-4 py-4 text-gray-700 text-xs lg:text-sm align-top">
+                        {member.appointmentsHandled}
+                      </td>
                       <td className="px-3 lg:px-4 py-4 align-top">
                         <span
                           className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                            member.status === "active" ? "bg-green-100 text-rra-green" : "bg-red-100 text-red-600"
+                            member.status === "active"
+                              ? "bg-green-100 text-rra-green"
+                              : "bg-red-100 text-red-600"
                           }`}
                         >
                           <UserCheck className="h-4 w-4" />
@@ -531,7 +689,11 @@ export default function AdminStaffManagement() {
                       <td className="px-3 lg:px-4 py-4 align-top">
                         <div className="relative" data-staff-action-menu>
                           <button
-                            onClick={() => setOpenActionMenuId((prev) => (prev === member.id ? null : member.id))}
+                            onClick={() =>
+                              setOpenActionMenuId((prev) =>
+                                prev === member.id ? null : member.id,
+                              )
+                            }
                             className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
                             title="Open actions"
                           >
@@ -540,12 +702,20 @@ export default function AdminStaffManagement() {
                           {openActionMenuId === member.id && (
                             <div className="absolute right-0 top-10 z-30 w-44 bg-white border border-gray-200 rounded-lg shadow-lg py-1">
                               <button
-                                onClick={() => handleToggleStatus(member)}
+                                onClick={() => openConfirmStatusDialog(member)}
                                 disabled={updatingStatusId === member.id}
                                 className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-60 flex items-center gap-2"
                               >
-                                {member.status === "active" ? <UserX className="h-4 w-4 text-red-600" /> : <UserCheck className="h-4 w-4 text-green-600" />}
-                                {updatingStatusId === member.id ? "Updating..." : member.status === "active" ? "Deactivate" : "Activate"}
+                                {member.status === "active" ? (
+                                  <UserX className="h-4 w-4 text-red-600" />
+                                ) : (
+                                  <UserCheck className="h-4 w-4 text-green-600" />
+                                )}
+                                {updatingStatusId === member.id
+                                  ? "Updating..."
+                                  : member.status === "active"
+                                    ? "Deactivate"
+                                    : "Activate"}
                               </button>
                               <button
                                 onClick={() => openEditFromMenu(member)}
@@ -570,17 +740,23 @@ export default function AdminStaffManagement() {
                 </tbody>
               </table>
             </div>
-          {filteredStaff.length === 0 && (
-              <div className="p-8 text-center text-gray-500">No staff members found matching your criteria.</div>
+            {filteredStaff.length === 0 && (
+              <div className="p-8 text-center text-gray-500">
+                No staff members found matching your criteria.
+              </div>
             )}
           </div>
 
           {deleteTarget && (
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-                <h3 className="text-2xl font-bold text-rra-navy mb-3">Confirm Delete</h3>
+                <h3 className="text-2xl font-bold text-rra-navy mb-3">
+                  Confirm Delete
+                </h3>
                 <p className="text-gray-600 text-base leading-relaxed mb-6">
-                  Are you sure you want to delete <span className="font-semibold">{deleteTarget.name}</span>? This action cannot be undone.
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold">{deleteTarget.name}</span>?
+                  This action cannot be undone.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <button
@@ -595,7 +771,9 @@ export default function AdminStaffManagement() {
                     disabled={deletingStaffId === deleteTarget.id}
                     className="px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-lg font-semibold disabled:opacity-60"
                   >
-                    {deletingStaffId === deleteTarget.id ? "Deleting..." : "Delete"}
+                    {deletingStaffId === deleteTarget.id
+                      ? "Deleting..."
+                      : "Delete"}
                   </button>
                 </div>
               </div>
@@ -606,8 +784,13 @@ export default function AdminStaffManagement() {
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-rra-navy">Add Staff Member</h2>
-                  <button onClick={() => setAddModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-lg transition">
+                  <h2 className="text-xl font-semibold text-rra-navy">
+                    Add Staff Member
+                  </h2>
+                  <button
+                    onClick={() => setAddModalOpen(false)}
+                    className="p-1 hover:bg-gray-100 rounded-lg transition"
+                  >
                     <Plus className="h-5 w-5 rotate-45 text-gray-600" />
                   </button>
                 </div>
@@ -621,34 +804,48 @@ export default function AdminStaffManagement() {
                     <input
                       type="text"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
                       placeholder="Full name"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     />
                     <input
                       type="email"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
                       placeholder="name@rra.gov.rw"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     />
                     <input
                       type="tel"
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
                       placeholder="+250 788 123 456"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     />
                     <input
                       type="text"
                       value={formData.position}
-                      onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, position: e.target.value })
+                      }
                       placeholder="Position"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     />
                     <select
                       value={formData.departmentId}
-                      onChange={(e) => setFormData({ ...formData, departmentId: e.target.value, serviceId: "" })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          departmentId: e.target.value,
+                          serviceId: "",
+                        })
+                      }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     >
                       <option value="">Select Department</option>
@@ -660,7 +857,9 @@ export default function AdminStaffManagement() {
                     </select>
                     <select
                       value={formData.serviceId}
-                      onChange={(e) => setFormData({ ...formData, serviceId: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, serviceId: e.target.value })
+                      }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     >
                       <option value="">Select Service (Optional)</option>
@@ -673,7 +872,9 @@ export default function AdminStaffManagement() {
                     <input
                       type="password"
                       value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
                       placeholder="Temporary password"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none md:col-span-2"
                     />
@@ -702,8 +903,13 @@ export default function AdminStaffManagement() {
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
                 <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-rra-navy">Edit Staff Member</h2>
-                  <button onClick={() => setEditModalOpen(false)} className="p-1 hover:bg-gray-100 rounded-lg transition">
+                  <h2 className="text-xl font-semibold text-rra-navy">
+                    Edit Staff Member
+                  </h2>
+                  <button
+                    onClick={() => setEditModalOpen(false)}
+                    className="p-1 hover:bg-gray-100 rounded-lg transition"
+                  >
                     <Plus className="h-5 w-5 rotate-45 text-gray-600" />
                   </button>
                 </div>
@@ -717,34 +923,60 @@ export default function AdminStaffManagement() {
                     <input
                       type="text"
                       value={editFormData.name}
-                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          name: e.target.value,
+                        })
+                      }
                       placeholder="Full name"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     />
                     <input
                       type="email"
                       value={editFormData.email}
-                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          email: e.target.value,
+                        })
+                      }
                       placeholder="name@rra.gov.rw"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     />
                     <input
                       type="tel"
                       value={editFormData.phone}
-                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          phone: e.target.value,
+                        })
+                      }
                       placeholder="+250 788 123 456"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     />
                     <input
                       type="text"
                       value={editFormData.position}
-                      onChange={(e) => setEditFormData({ ...editFormData, position: e.target.value })}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          position: e.target.value,
+                        })
+                      }
                       placeholder="Position"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     />
                     <select
                       value={editFormData.departmentId}
-                      onChange={(e) => setEditFormData({ ...editFormData, departmentId: e.target.value, serviceId: "" })}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          departmentId: e.target.value,
+                          serviceId: "",
+                        })
+                      }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     >
                       <option value="">Select Department</option>
@@ -756,7 +988,12 @@ export default function AdminStaffManagement() {
                     </select>
                     <select
                       value={editFormData.serviceId}
-                      onChange={(e) => setEditFormData({ ...editFormData, serviceId: e.target.value })}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          serviceId: e.target.value,
+                        })
+                      }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none"
                     >
                       <option value="">Select Service</option>
@@ -768,7 +1005,12 @@ export default function AdminStaffManagement() {
                     </select>
                     <select
                       value={editFormData.active ? "active" : "inactive"}
-                      onChange={(e) => setEditFormData({ ...editFormData, active: e.target.value === "active" })}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          active: e.target.value === "active",
+                        })
+                      }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg outline-none md:col-span-2"
                     >
                       <option value="active">Active</option>
@@ -789,6 +1031,57 @@ export default function AdminStaffManagement() {
                     className="flex-1 px-4 py-2 bg-rra-blue text-white rounded-lg hover:opacity-90 disabled:opacity-60 transition font-medium"
                   >
                     {editLoading ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Confirm Status Toggle Modal */}
+          {confirmStatusDialogOpen && staffToToggleStatus && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+                <h3 className="text-xl font-bold text-rra-navy mb-3">
+                  {staffToToggleStatus.status === "active"
+                    ? "Deactivate Staff Member"
+                    : "Activate Staff Member"}
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  {staffToToggleStatus.status === "active"
+                    ? `Are you sure you want to deactivate ${staffToToggleStatus.name}? They will not be able to access the system.`
+                    : `Are you sure you want to activate ${staffToToggleStatus.name}? They will be able to access the system again.`}
+                </p>
+                {statusError && (
+                  <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {statusError}
+                  </div>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setConfirmStatusDialogOpen(false);
+                      setStaffToToggleStatus(null);
+                      setStatusError(null);
+                    }}
+                    disabled={updatingStatusId === staffToToggleStatus.id}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleToggleStatus}
+                    disabled={updatingStatusId === staffToToggleStatus.id}
+                    className={`flex-1 px-4 py-2 text-white rounded-lg transition font-medium disabled:opacity-60 ${
+                      staffToToggleStatus.status === "active"
+                        ? "bg-red-600 hover:bg-red-700"
+                        : "bg-green-600 hover:bg-green-700"
+                    }`}
+                  >
+                    {updatingStatusId === staffToToggleStatus.id
+                      ? "Updating..."
+                      : staffToToggleStatus.status === "active"
+                        ? "Deactivate"
+                        : "Activate"}
                   </button>
                 </div>
               </div>

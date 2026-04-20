@@ -83,7 +83,7 @@ public class StaffController {
 	}
 
 	@PatchMapping("/{id}")
-	public ResponseEntity<StaffResponse> update(@PathVariable UUID id, @Valid @RequestBody StaffUpdateRequest request) {
+	public ResponseEntity<StaffResponse> update(@PathVariable("id") UUID id, @Valid @RequestBody StaffUpdateRequest request) {
 		requireAdmin();
 		User user = userRepository.findById(id)
 				.orElseThrow(() -> new IllegalArgumentException("Staff user not found"));
@@ -102,7 +102,7 @@ public class StaffController {
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> delete(@PathVariable UUID id) {
+	public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
 		requireAdmin();
 		User user = userRepository.findById(id)
 				.orElseThrow(() -> new IllegalArgumentException("Staff user not found"));

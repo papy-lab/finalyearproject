@@ -1,8 +1,8 @@
-import { TrendingUp, Clock, CheckCircle2, AlertCircle, Calendar } from "lucide-react";
+import { TrendingUp, Clock, CheckCircle2, Calendar, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import StaffLayout from "@/components/layout/StaffLayout";
 import { useAuth } from "@/context/AuthContext";
-import { api, AppointmentResponse } from "@/lib/api";
+import { api, AppointmentResponse, FeedbackResponse } from "@/lib/api";
 
 interface Appointment {
   id: string;
@@ -17,6 +17,7 @@ interface Appointment {
 export default function StaffDashboard() {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [recentFeedback, setRecentFeedback] = useState<FeedbackResponse[]>([]);
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -35,7 +36,7 @@ export default function StaffDashboard() {
         setAppointments(data.map((apt: AppointmentResponse) => ({
           id: apt.id,
           clientName: apt.clientName || "Unknown",
-          service: apt.appointmentType,
+          service: apt.serviceName || apt.appointmentType,
           date: formatDate(apt.date),
           dateIso: apt.date,
           time: formatTime(apt.time),
@@ -44,9 +45,20 @@ export default function StaffDashboard() {
       } catch {
         setAppointments([]);
       }
+
+      try {
+        if (user?.id) {
+          const feedback = await api.getFeedbackForStaff(user.id);
+          setRecentFeedback(feedback.slice(0, 5));
+        } else {
+          setRecentFeedback([]);
+        }
+      } catch {
+        setRecentFeedback([]);
+      }
     };
     loadAppointments();
-  }, []);
+  }, [user?.id]);
 
   const stats = useMemo(() => {
     const today = new Date();
@@ -66,8 +78,13 @@ export default function StaffDashboard() {
       appointmentsToday,
       appointmentsWeek,
       completed,
+      averageRating:
+        recentFeedback.length > 0
+          ? recentFeedback.reduce((sum, item) => sum + item.rating, 0) /
+            recentFeedback.length
+          : 0,
     };
-  }, [appointments]);
+  }, [appointments, recentFeedback]);
 
   const statsCards = [
     {
@@ -93,8 +110,8 @@ export default function StaffDashboard() {
     },
     {
       label: "Avg. Rating",
-      value: "4.7",
-      change: "+0.2 from last month",
+      value: stats.averageRating.toFixed(1),
+      change: `${recentFeedback.length} review${recentFeedback.length === 1 ? "" : "s"}`,
       icon: TrendingUp,
       color: "bg-purple-50 text-purple-600"
     }
@@ -127,49 +144,89 @@ export default function StaffDashboard() {
             })}
           </div>
 
-          {/* Upcoming Appointments */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="border-b border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900">Upcoming Appointments</h3>
-              <p className="text-sm text-gray-600 mt-1">Next scheduled appointments</p>
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200">
+              <div className="border-b border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900">Upcoming Appointments</h3>
+                <p className="text-sm text-gray-600 mt-1">Next scheduled appointments</p>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {appointments.length > 0 ? (
+                  appointments.map((apt) => (
+                    <div
+                      key={apt.id}
+                      className="flex items-start justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
+                    >
+                      <div className="flex gap-4 flex-1">
+                        <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg flex-shrink-0">
+                          <CheckCircle2 className="h-6 w-6 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{apt.clientName}</p>
+                          <p className="text-sm text-gray-600">{apt.service}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">{apt.date}</p>
+                        <p className="text-sm text-gray-600">{apt.time}</p>
+                      </div>
+                      <div className="ml-4">
+                        <span
+                          className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                            apt.status === "confirmed"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          {apt.status === "confirmed" ? "confirmed" : "pending"}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500 py-8">No upcoming appointments</p>
+                )}
+              </div>
             </div>
 
-            <div className="p-6 space-y-4">
-              {appointments.length > 0 ? (
-                appointments.map((apt) => (
-                  <div
-                    key={apt.id}
-                    className="flex items-start justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
-                  >
-                    <div className="flex gap-4 flex-1">
-                      <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-lg flex-shrink-0">
-                        <CheckCircle2 className="h-6 w-6 text-green-600" />
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              <div className="border-b border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Feedback</h3>
+                <p className="text-sm text-gray-600 mt-1">Latest client reviews on your dashboard</p>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {recentFeedback.length > 0 ? (
+                  recentFeedback.map((feedback) => (
+                    <div key={feedback.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-gray-900">{feedback.clientName}</p>
+                          <p className="text-sm text-gray-600">
+                            {feedback.serviceName || feedback.appointmentType}
+                          </p>
+                        </div>
+                        <div className="flex gap-0.5">
+                          {[...Array(5)].map((_, index) => (
+                            <Star
+                              key={index}
+                              className={`h-4 w-4 ${
+                                index < feedback.rating
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{apt.clientName}</p>
-                        <p className="text-sm text-gray-600">{apt.service}</p>
-                      </div>
+                      <p className="text-sm text-gray-700 mt-3">{feedback.comment}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900">{apt.date}</p>
-                      <p className="text-sm text-gray-600">{apt.time}</p>
-                    </div>
-                    <div className="ml-4">
-                      <span
-                        className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                          apt.status === "confirmed"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}
-                      >
-                        {apt.status === "confirmed" ? "confirmed" : "pending"}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-gray-500 py-8">No upcoming appointments</p>
-              )}
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">No feedback available yet.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>

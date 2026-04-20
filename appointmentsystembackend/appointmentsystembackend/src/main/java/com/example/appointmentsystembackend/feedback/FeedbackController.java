@@ -32,7 +32,7 @@ public class FeedbackController {
 	}
 
 	@PostMapping("/{appointmentId}")
-	public ResponseEntity<FeedbackResponse> createFeedback(@PathVariable UUID appointmentId,
+	public ResponseEntity<FeedbackResponse> createFeedback(@PathVariable("appointmentId") UUID appointmentId,
 			@Valid @RequestBody FeedbackRequest request) {
 		User user = currentUser();
 		FeedbackResponse response = feedbackService.createFeedback(user, appointmentId, request);
@@ -40,13 +40,13 @@ public class FeedbackController {
 	}
 
 	@GetMapping("/staff/{staffId}")
-	public ResponseEntity<List<FeedbackResponse>> getFeedbackForStaff(@PathVariable UUID staffId) {
+	public ResponseEntity<List<FeedbackResponse>> getFeedbackForStaff(@PathVariable("staffId") UUID staffId) {
 		List<FeedbackResponse> feedbacks = feedbackService.getFeedbackForStaff(staffId);
 		return ResponseEntity.ok(feedbacks);
 	}
 
 	@GetMapping("/client/{clientId}")
-	public ResponseEntity<List<FeedbackResponse>> getFeedbackForClient(@PathVariable UUID clientId) {
+	public ResponseEntity<List<FeedbackResponse>> getFeedbackForClient(@PathVariable("clientId") UUID clientId) {
 		List<FeedbackResponse> feedbacks = feedbackService.getFeedbackForClient(clientId);
 		return ResponseEntity.ok(feedbacks);
 	}
@@ -62,7 +62,7 @@ public class FeedbackController {
 	}
 
 	@GetMapping("/appointment/{appointmentId}")
-	public ResponseEntity<FeedbackResponse> getFeedbackByAppointment(@PathVariable UUID appointmentId) {
+	public ResponseEntity<FeedbackResponse> getFeedbackByAppointment(@PathVariable("appointmentId") UUID appointmentId) {
 		FeedbackResponse feedback = feedbackService.getFeedbackByAppointment(appointmentId);
 		return ResponseEntity.ok(feedback);
 	}

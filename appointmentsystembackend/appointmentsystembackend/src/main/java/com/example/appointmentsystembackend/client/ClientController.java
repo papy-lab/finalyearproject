@@ -44,7 +44,7 @@ public class ClientController {
 	}
 
 	@PatchMapping("/{id}/status")
-	public ResponseEntity<ClientResponse> updateStatus(@PathVariable UUID id,
+	public ResponseEntity<ClientResponse> updateStatus(@PathVariable("id") UUID id,
 			@Valid @RequestBody ClientStatusRequest request) {
 		requireAdmin();
 		User user = userRepository.findById(id).orElseThrow();

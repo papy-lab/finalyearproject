@@ -21,17 +21,23 @@ public record AppointmentResponse(
 	public static AppointmentResponse from(Appointment appointment) {
 		User client = appointment.getClient();
 		User staff = appointment.getStaff();
+		String serviceName = appointment.getAppointmentType();
+		String date = appointment.getDate() != null ? appointment.getDate().toString() : "";
+		String time = appointment.getTime() != null ? appointment.getTime().toString() : "";
+		String location = appointment.getLocation() != null ? appointment.getLocation() : "";
+		String status = appointment.getStatus() != null ? appointment.getStatus().name().toLowerCase() : "pending";
+
 		return new AppointmentResponse(
 				appointment.getId().toString(),
 				appointment.getServiceId() != null ? appointment.getServiceId().toString() : null,
-				appointment.getAppointmentType(),
+				serviceName,
 				staff != null && staff.getDepartmentId() != null ? staff.getDepartmentId().toString() : null,
 				staff != null ? staff.getDepartment() : null,
-				appointment.getAppointmentType(),
-				appointment.getDate().toString(),
-				appointment.getTime().toString(),
-				appointment.getLocation(),
-				appointment.getStatus().name().toLowerCase(),
+				appointment.getAppointmentType() != null ? appointment.getAppointmentType() : "Appointment",
+				date,
+				time,
+				location,
+				status,
 				client != null ? client.getFullName() : null,
 				client != null ? client.getEmail() : null,
 				client != null ? client.getPhone() : null,

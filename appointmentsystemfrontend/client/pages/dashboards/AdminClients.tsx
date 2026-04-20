@@ -12,6 +12,10 @@ export default function AdminClients() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatingClientId, setUpdatingClientId] = useState<string | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [clientToToggle, setClientToToggle] = useState<ClientResponse | null>(
+    null,
+  );
 
   useEffect(() => {
     const loadClients = async () => {
@@ -20,8 +24,8 @@ export default function AdminClients() {
         const normalized = Array.isArray(data)
           ? data
           : Array.isArray((data as { value?: ClientResponse[] }).value)
-          ? (data as { value: ClientResponse[] }).value
-          : [];
+            ? (data as { value: ClientResponse[] }).value
+            : [];
         setClients(normalized);
         setError("");
       } catch (err) {
@@ -29,8 +33,8 @@ export default function AdminClients() {
           err instanceof Error && err.message.includes("403")
             ? "Access denied. Please login as admin to view clients."
             : err instanceof Error
-            ? err.message
-            : "Failed to load clients";
+              ? err.message
+              : "Failed to load clients";
         setError(message);
       } finally {
         setLoading(false);
@@ -48,25 +52,48 @@ export default function AdminClients() {
         client.email.toLowerCase().includes(term) ||
         (client.phone ?? "").toLowerCase().includes(term);
       const matchesStatus =
-        filter === "all" || (filter === "active" ? client.active : !client.active);
+        filter === "all" ||
+        (filter === "active" ? client.active : !client.active);
       return matchesQuery && matchesStatus;
     });
   }, [clients, query, filter]);
 
-  const handleToggleStatus = async (client: ClientResponse) => {
-    const nextActive = !client.active;
+  const openConfirmDialog = (client: ClientResponse) => {
+    setClientToToggle(client);
+    setConfirmDialogOpen(true);
+  };
+
+  const handleToggleStatus = async () => {
+    if (!clientToToggle) return;
+
+    const nextActive = !clientToToggle.active;
     try {
-      setUpdatingClientId(client.id);
+      setUpdatingClientId(clientToToggle.id);
       setError("");
-      const updated = await api.updateClientStatus(client.id, nextActive);
-      setClients((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      console.log(
+        "Toggling client status:",
+        clientToToggle.id,
+        "to active:",
+        nextActive,
+      );
+      const updated = await api.updateClientStatus(
+        clientToToggle.id,
+        nextActive,
+      );
+      console.log("Client status updated:", updated);
+      setClients((prev) =>
+        prev.map((c) => (c.id === updated.id ? updated : c)),
+      );
+      setConfirmDialogOpen(false);
+      setClientToToggle(null);
     } catch (err) {
+      console.error("Error toggling status:", err);
       const message =
         err instanceof Error && err.message.includes("403")
           ? "Access denied. Please login as admin to update client status."
           : err instanceof Error
-          ? err.message
-          : "Failed to update status";
+            ? err.message
+            : "Failed to update status";
       setError(message);
     } finally {
       setUpdatingClientId(null);
@@ -78,7 +105,9 @@ export default function AdminClients() {
       <div className="p-4 sm:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-rra-navy mb-2">Client Management</h2>
+            <h2 className="text-3xl font-bold text-rra-navy mb-2">
+              Client Management
+            </h2>
             <p className="text-gray-600">Manage client accounts and activity</p>
           </div>
 
@@ -145,13 +174,19 @@ export default function AdminClients() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-6 text-center text-sm text-gray-500">
+                      <td
+                        colSpan={5}
+                        className="px-6 py-6 text-center text-sm text-gray-500"
+                      >
                         Loading clients...
                       </td>
                     </tr>
                   ) : filteredClients.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-6 text-center text-sm text-gray-500">
+                      <td
+                        colSpan={5}
+                        className="px-6 py-6 text-center text-sm text-gray-500"
+                      >
                         No clients found.
                       </td>
                     </tr>
@@ -159,8 +194,12 @@ export default function AdminClients() {
                     filteredClients.map((client) => (
                       <tr key={client.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
-                          <p className="text-sm font-semibold text-gray-900">{client.fullName}</p>
-                          <p className="text-xs text-gray-500">{client.email}</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {client.fullName}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {client.email}
+                          </p>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">
                           {client.phone || "—"}
@@ -181,7 +220,7 @@ export default function AdminClients() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button
-                            onClick={() => handleToggleStatus(client)}
+                            onClick={() => openConfirmDialog(client)}
                             disabled={updatingClientId === client.id}
                             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-60 whitespace-nowrap ${
                               client.active
@@ -189,8 +228,17 @@ export default function AdminClients() {
                                 : "bg-green-50 text-green-600 hover:bg-green-100"
                             }`}
                           >
-                            {updatingClientId === client.id ? null : client.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                            {updatingClientId === client.id ? "Updating..." : client.active ? "Deactivate" : "Activate"}
+                            {updatingClientId ===
+                            client.id ? null : client.active ? (
+                              <UserX className="h-4 w-4" />
+                            ) : (
+                              <UserCheck className="h-4 w-4" />
+                            )}
+                            {updatingClientId === client.id
+                              ? "Updating..."
+                              : client.active
+                                ? "Deactivate"
+                                : "Activate"}
                           </button>
                         </td>
                       </tr>
@@ -202,6 +250,55 @@ export default function AdminClients() {
           </div>
         </div>
       </div>
+
+      {/* Confirm Toggle Status Modal */}
+      {confirmDialogOpen && clientToToggle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+            <h3 className="text-xl font-bold text-rra-navy mb-3">
+              {clientToToggle.active ? "Deactivate Client" : "Activate Client"}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {clientToToggle.active
+                ? `Are you sure you want to deactivate ${clientToToggle.fullName}? They will not be able to book appointments.`
+                : `Are you sure you want to activate ${clientToToggle.fullName}? They will be able to book appointments again.`}
+            </p>
+            {error && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setConfirmDialogOpen(false);
+                  setClientToToggle(null);
+                  setError("");
+                }}
+                disabled={updatingClientId === clientToToggle.id}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleToggleStatus}
+                disabled={updatingClientId === clientToToggle.id}
+                className={`flex-1 px-4 py-2 text-white rounded-lg transition font-medium disabled:opacity-60 ${
+                  clientToToggle.active
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
+              >
+                {updatingClientId === clientToToggle.id
+                  ? "Updating..."
+                  : clientToToggle.active
+                    ? "Deactivate"
+                    : "Activate"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
