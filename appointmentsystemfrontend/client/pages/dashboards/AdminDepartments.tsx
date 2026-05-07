@@ -1,10 +1,13 @@
 import { Edit2, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import { api, DepartmentResponse } from "@/lib/api";
 
 export default function AdminDepartments() {
+  const pageSize = 10;
   const [departments, setDepartments] = useState<DepartmentResponse[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<DepartmentResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +38,16 @@ export default function AdminDepartments() {
   useEffect(() => {
     fetchDepartments();
   }, []);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(departments.length / pageSize));
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [departments.length]);
+
+  const paginatedDepartments = departments.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
 
   const handleCreate = async () => {
     if (!form.name.trim()) {
@@ -150,7 +163,7 @@ export default function AdminDepartments() {
                     </td>
                   </tr>
                 )}
-                {departments.map((dept) => (
+                {paginatedDepartments.map((dept) => (
                   <tr key={dept.id} className="border-b border-gray-200">
                     <td className="px-6 py-4 text-gray-900 font-medium">{dept.name}</td>
                     <td className="px-6 py-4 text-gray-700 capitalize">{dept.type}</td>
@@ -192,6 +205,13 @@ export default function AdminDepartments() {
             {!initialLoading && departments.length === 0 && (
               <div className="p-8 text-center text-gray-500">No departments found.</div>
             )}
+            <DashboardPagination
+              currentPage={currentPage}
+              totalItems={departments.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemLabel="departments"
+            />
           </div>
 
           {open && (

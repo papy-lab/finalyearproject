@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, UserCheck, UserX } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import { api, ClientResponse } from "@/lib/api";
 
 type StatusFilter = "all" | "active" | "inactive";
 
 export default function AdminClients() {
+  const pageSize = 10;
   const [clients, setClients] = useState<ClientResponse[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatingClientId, setUpdatingClientId] = useState<string | null>(null);
@@ -57,6 +60,20 @@ export default function AdminClients() {
       return matchesQuery && matchesStatus;
     });
   }, [clients, query, filter]);
+
+  const paginatedClients = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredClients.slice(start, start + pageSize);
+  }, [currentPage, filteredClients]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, filter]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredClients.length / pageSize));
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [filteredClients.length]);
 
   const openConfirmDialog = (client: ClientResponse) => {
     setClientToToggle(client);
@@ -191,7 +208,7 @@ export default function AdminClients() {
                       </td>
                     </tr>
                   ) : (
-                    filteredClients.map((client) => (
+                    paginatedClients.map((client) => (
                       <tr key={client.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <p className="text-sm font-semibold text-gray-900">
@@ -247,6 +264,13 @@ export default function AdminClients() {
                 </tbody>
               </table>
             </div>
+            <DashboardPagination
+              currentPage={currentPage}
+              totalItems={filteredClients.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemLabel="clients"
+            />
           </div>
         </div>
       </div>

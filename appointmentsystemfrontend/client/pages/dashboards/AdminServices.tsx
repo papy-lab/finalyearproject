@@ -1,10 +1,13 @@
 import { Edit2, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import { api, DepartmentResponse, ServiceCatalogResponse } from "@/lib/api";
 
 export default function AdminServices() {
+  const pageSize = 10;
   const [services, setServices] = useState<ServiceCatalogResponse[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [departments, setDepartments] = useState<DepartmentResponse[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceCatalogResponse | null>(null);
@@ -33,6 +36,16 @@ export default function AdminServices() {
     };
     load();
   }, []);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(services.length / pageSize));
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [services.length]);
+
+  const paginatedServices = services.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
 
   const handleCreate = async () => {
     if (!form.name.trim() || !form.departmentId) {
@@ -126,7 +139,7 @@ export default function AdminServices() {
                 </tr>
               </thead>
               <tbody>
-                {services.map((service) => (
+                {paginatedServices.map((service) => (
                   <tr key={service.id} className="border-b border-gray-200">
                     <td className="px-6 py-4 text-gray-900 font-medium">{service.name}</td>
                     <td className="px-6 py-4 text-gray-700">{service.departmentName || "-"}</td>
@@ -167,6 +180,13 @@ export default function AdminServices() {
               </tbody>
             </table>
             {services.length === 0 && <div className="p-8 text-center text-gray-500">No services found.</div>}
+            <DashboardPagination
+              currentPage={currentPage}
+              totalItems={services.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemLabel="services"
+            />
           </div>
 
           {open && (

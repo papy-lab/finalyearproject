@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import { api, AppointmentResponse } from "@/lib/api";
 import {
   AlertDialog,
@@ -35,10 +36,12 @@ interface Appointment {
 }
 
 export default function AdminAppointments() {
+  const pageSize = 10;
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -149,6 +152,11 @@ export default function AdminAppointments() {
     return matchesSearch && matchesStatus;
   });
 
+  const paginatedAppointments = filteredAppointments.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "confirmed":
@@ -197,6 +205,15 @@ export default function AdminAppointments() {
     };
     loadAppointments();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / pageSize));
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [filteredAppointments.length]);
 
   return (
     <AdminLayout>
@@ -307,7 +324,7 @@ export default function AdminAppointments() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAppointments.map((apt) => (
+                  {paginatedAppointments.map((apt) => (
                     <tr
                       key={apt.id}
                       className="border-b border-gray-200 hover:bg-gray-50 transition"
@@ -395,6 +412,13 @@ export default function AdminAppointments() {
                 No appointments found matching your criteria.
               </div>
             )}
+            <DashboardPagination
+              currentPage={currentPage}
+              totalItems={filteredAppointments.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemLabel="appointments"
+            />
           </div>
         </div>
 

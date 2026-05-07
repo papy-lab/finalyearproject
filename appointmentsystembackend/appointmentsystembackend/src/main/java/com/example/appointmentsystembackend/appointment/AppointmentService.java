@@ -3,6 +3,7 @@ package com.example.appointmentsystembackend.appointment;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.DayOfWeek;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -29,6 +30,8 @@ import com.example.appointmentsystembackend.user.UserRepository;
 public class AppointmentService {
 	private static final LocalTime WORK_START = LocalTime.of(8, 0);
 	private static final LocalTime WORK_END = LocalTime.of(17, 0);
+	private static final String CLIENT_TIME_CONFLICT_MESSAGE =
+			"You requested the appointment on this office at the same hour you did for other office.";
 
 	private final AppointmentRepository appointmentRepository;
 	private final UserRepository userRepository;
@@ -83,6 +86,7 @@ public class AppointmentService {
 		LocalDate appointmentDate = LocalDate.parse(request.date());
 		LocalTime appointmentTime = LocalTime.parse(request.time());
 		validateWorkingDayAndHours(appointmentDate, appointmentTime);
+		validateClientHasNoAppointmentAtSameTime(client, appointmentDate, appointmentTime, null);
 		Appointment appointment = new Appointment(
 				client,
 				staff,
@@ -220,6 +224,11 @@ public class AppointmentService {
 		}
 		if ((request.date() != null && !request.date().isBlank()) || (request.time() != null && !request.time().isBlank())) {
 			validateWorkingDayAndHours(appointment.getDate(), appointment.getTime());
+			validateClientHasNoAppointmentAtSameTime(
+					appointment.getClient(),
+					appointment.getDate(),
+					appointment.getTime(),
+					appointment.getId());
 		}
 		if (request.location() != null && !request.location().isBlank()) {
 			appointment.setLocation(request.location());
@@ -357,6 +366,24 @@ public class AppointmentService {
 		}
 		if (time.isBefore(WORK_START) || time.isAfter(WORK_END)) {
 			throw new IllegalArgumentException("Appointment time must be within working hours (08:00 - 17:00).");
+		}
+	}
+
+	private void validateClientHasNoAppointmentAtSameTime(User client, LocalDate date, LocalTime time,
+			UUID currentAppointmentId) {
+		LocalTime hourStart = time.truncatedTo(ChronoUnit.HOURS);
+		LocalTime hourEnd = hourStart.plusHours(1).minusNanos(1);
+		boolean hasConflict = appointmentRepository
+				.findByClientIdAndDateAndTimeBetweenAndStatusNot(
+						client.getId(),
+						date,
+						hourStart,
+						hourEnd,
+						AppointmentStatus.CANCELLED)
+				.stream()
+				.anyMatch(existing -> currentAppointmentId == null || !existing.getId().equals(currentAppointmentId));
+		if (hasConflict) {
+			throw new IllegalArgumentException(CLIENT_TIME_CONFLICT_MESSAGE);
 		}
 	}
 }

@@ -1,10 +1,13 @@
 import { AlertCircle, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import { api, FeedbackResponse } from "@/lib/api";
 
 export default function AdminFeedback() {
+  const pageSize = 8;
   const [feedbacks, setFeedbacks] = useState<FeedbackResponse[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +64,11 @@ export default function AdminFeedback() {
     ));
   };
 
+  const paginatedFeedbacks = feedbacks.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -69,6 +77,11 @@ export default function AdminFeedback() {
       day: "numeric",
     });
   };
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(feedbacks.length / pageSize));
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [feedbacks.length]);
 
   return (
     <AdminLayout>
@@ -179,7 +192,7 @@ export default function AdminFeedback() {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-                  {feedbacks.map((feedback) => (
+                  {paginatedFeedbacks.map((feedback) => (
                     <div
                       key={feedback.id}
                       className="p-6 hover:bg-gray-50 transition-colors"
@@ -243,7 +256,7 @@ export default function AdminFeedback() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {feedbacks.map((feedback) => (
+                    {paginatedFeedbacks.map((feedback) => (
                       <tr
                         key={feedback.id}
                         className="hover:bg-gray-50 transition-colors"
@@ -273,6 +286,13 @@ export default function AdminFeedback() {
                   </tbody>
                 </table>
               </div>
+              <DashboardPagination
+                currentPage={currentPage}
+                totalItems={feedbacks.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                itemLabel="feedback entries"
+              />
             </div>
           )}
         </div>

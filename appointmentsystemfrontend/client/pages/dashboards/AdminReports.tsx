@@ -1,6 +1,7 @@
 import { Calendar, Download, FileText, Filter, CheckCircle2, XCircle, Clock3, Link2Off, Link2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import { api, AdminReportsResponse, DepartmentResponse } from "@/lib/api";
 import {
   ResponsiveContainer,
@@ -19,10 +20,12 @@ import {
 } from "recharts";
 
 export default function AdminReports() {
+  const pageSize = 10;
   const [dateRange, setDateRange] = useState("month");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [exportMessage, setExportMessage] = useState("");
   const [loadError, setLoadError] = useState("");
   const [report, setReport] = useState<AdminReportsResponse | null>(null);
@@ -71,6 +74,11 @@ export default function AdminReports() {
     return { approved, rejected, pending };
   }, [filteredAppointments]);
 
+  const paginatedAppointments = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredAppointments.slice(start, start + pageSize);
+  }, [currentPage, filteredAppointments]);
+
   const toReportRef = (id: string) => `APT-${id.slice(0, 8).toUpperCase()}`;
 
   const formatDateTime = (date: string, time: string) => {
@@ -102,6 +110,14 @@ export default function AdminReports() {
     setExportMessage(message);
     setTimeout(() => setExportMessage(""), ms);
   };
+
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
 
   const handleExportCsv = () => {
     if (!filteredAppointments.length) {
@@ -160,9 +176,10 @@ export default function AdminReports() {
     const rowsHtml = filteredAppointments
       .map(
         (row) =>
-          `<tr><td>${row.appointmentId}</td><td>${row.date}</td><td>${row.time}</td><td>${row.status}</td><td>${row.serviceType}</td><td>${row.department}</td><td>${row.clientName}</td><td>${row.staffName}</td></tr>`
+          `<tr><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.time)}</td><td>${escapeHtml(row.status)}</td><td>${escapeHtml(row.serviceType)}</td><td>${escapeHtml(row.department)}</td><td>${escapeHtml(row.clientName)}</td><td>${escapeHtml(row.staffName)}</td></tr>`
       )
       .join("");
+    const generatedAt = new Date().toLocaleString();
 
     popup.document.write(`
       <html>
@@ -170,20 +187,28 @@ export default function AdminReports() {
           <title>Appointment Report</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
-            h1 { margin: 0 0 6px 0; font-size: 24px; }
+            .report-header { display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #0052A5; padding-bottom: 16px; margin-bottom: 16px; }
+            .report-logo { width: 92px; height: auto; object-fit: contain; }
+            h1 { margin: 0 0 6px 0; font-size: 24px; color: #003875; }
             p { margin: 0 0 12px 0; color: #4b5563; }
             table { width: 100%; border-collapse: collapse; font-size: 12px; }
             th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; vertical-align: top; }
             th { background: #f3f4f6; font-weight: 700; }
+            @page { margin: 16mm; }
           </style>
         </head>
         <body>
-          <h1>Appointment Report</h1>
-          <p>Range: ${dateRange} | Department: ${selectedDepartment} | Status: ${selectedStatus} | Rows: ${filteredAppointments.length} | Generated: ${new Date().toLocaleString()}</p>
+          <div class="report-header">
+            <img class="report-logo" src="/rra-logo.png" alt="Rwanda Revenue Authority logo" />
+            <div>
+              <h1>Rwanda Revenue Authority</h1>
+              <p>Appointment Report</p>
+              <p>Range: ${escapeHtml(dateRange)} | Department: ${escapeHtml(selectedDepartment)} | Status: ${escapeHtml(selectedStatus)} | Rows: ${filteredAppointments.length} | Generated: ${escapeHtml(generatedAt)}</p>
+            </div>
+          </div>
           <table>
             <thead>
               <tr>
-                <th>Appointment ID</th>
                 <th>Date</th>
                 <th>Time</th>
                 <th>Status</th>
@@ -195,13 +220,24 @@ export default function AdminReports() {
             </thead>
             <tbody>${rowsHtml}</tbody>
           </table>
+          <script>
+            const logo = document.querySelector(".report-logo");
+            const printReport = () => {
+              window.focus();
+              window.print();
+            };
+            if (logo && !logo.complete) {
+              logo.addEventListener("load", printReport, { once: true });
+              logo.addEventListener("error", printReport, { once: true });
+            } else {
+              printReport();
+            }
+          </script>
         </body>
       </html>
     `);
 
     popup.document.close();
-    popup.focus();
-    popup.print();
     showTemporaryMessage("PDF export dialog opened.");
   };
 
@@ -218,6 +254,15 @@ export default function AdminReports() {
     };
     loadReport();
   }, [dateRange, selectedDepartment]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedStatus, dateRange, selectedDepartment]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / pageSize));
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [filteredAppointments.length]);
 
   useEffect(() => {
     const loadDepartments = async () => {
@@ -552,7 +597,7 @@ export default function AdminReports() {
                   No appointment report rows match the selected filters.
                 </div>
               ) : (
-                filteredAppointments.map((row) => (
+                paginatedAppointments.map((row) => (
                   <div key={row.appointmentId} className="rounded-lg border border-gray-200 p-4 bg-white">
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <p className="text-sm font-semibold text-rra-navy">{toReportRef(row.appointmentId)}</p>
@@ -596,7 +641,7 @@ export default function AdminReports() {
                       </td>
                     </tr>
                   ) : (
-                    filteredAppointments.map((row) => (
+                    paginatedAppointments.map((row) => (
                       <tr key={row.appointmentId} className="hover:bg-gray-50">
                         <td className="px-4 sm:px-6 py-3 text-sm font-medium text-rra-navy whitespace-nowrap">{toReportRef(row.appointmentId)}</td>
                         <td className="px-4 sm:px-6 py-3 text-sm text-gray-700 whitespace-nowrap">{formatDateTime(row.date, row.time)}</td>
@@ -621,6 +666,13 @@ export default function AdminReports() {
                 </tbody>
               </table>
             </div>
+            <DashboardPagination
+              currentPage={currentPage}
+              totalItems={filteredAppointments.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemLabel="report rows"
+            />
           </div>
         </div>
       </div>

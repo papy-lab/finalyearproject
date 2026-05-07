@@ -1,11 +1,15 @@
 import { Download, CheckCircle2, Clock as ClockIcon, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import ClientLayout from "@/components/layout/ClientLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import { api, ClientHistoryResponse } from "@/lib/api";
 
 export default function ClientHistory() {
+  const pageSize = 6;
   const currentYear = new Date().getFullYear();
   const [filterYear, setFilterYear] = useState(currentYear.toString());
+  const [completedPage, setCompletedPage] = useState(1);
+  const [cancelledPage, setCancelledPage] = useState(1);
   const [history, setHistory] = useState<ClientHistoryResponse | null>(null);
   const [exportMessage, setExportMessage] = useState("");
 
@@ -24,6 +28,29 @@ export default function ClientHistory() {
     };
     loadHistory();
   }, [filterYear]);
+
+  const completedAppointments = history?.completedAppointments || [];
+  const cancelledAppointments = history?.cancelledAppointments || [];
+  const paginatedCompletedAppointments = completedAppointments.slice(
+    (completedPage - 1) * pageSize,
+    completedPage * pageSize,
+  );
+  const paginatedCancelledAppointments = cancelledAppointments.slice(
+    (cancelledPage - 1) * pageSize,
+    cancelledPage * pageSize,
+  );
+
+  useEffect(() => {
+    setCompletedPage(1);
+    setCancelledPage(1);
+  }, [filterYear]);
+
+  useEffect(() => {
+    const completedPages = Math.max(1, Math.ceil(completedAppointments.length / pageSize));
+    const cancelledPages = Math.max(1, Math.ceil(cancelledAppointments.length / pageSize));
+    setCompletedPage((page) => Math.min(page, completedPages));
+    setCancelledPage((page) => Math.min(page, cancelledPages));
+  }, [completedAppointments.length, cancelledAppointments.length]);
 
   const showTemporaryMessage = (message: string, ms = 3000) => {
     setExportMessage(message);
@@ -217,7 +244,7 @@ export default function ClientHistory() {
               <h3 className="text-lg font-semibold text-rra-navy">Completed Appointments</h3>
             </div>
             <div className="divide-y divide-gray-200">
-              {(history?.completedAppointments || []).map((apt) => (
+              {paginatedCompletedAppointments.map((apt) => (
                 <div key={apt.id} className="p-6 hover:bg-gray-50 transition">
                   <div className="grid md:grid-cols-5 gap-4 items-center">
                     <div>
@@ -249,6 +276,13 @@ export default function ClientHistory() {
                 </div>
               ))}
             </div>
+            <DashboardPagination
+              currentPage={completedPage}
+              totalItems={completedAppointments.length}
+              pageSize={pageSize}
+              onPageChange={setCompletedPage}
+              itemLabel="completed appointments"
+            />
           </div>
 
           {/* Cancelled Appointments */}
@@ -263,7 +297,7 @@ export default function ClientHistory() {
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
-                {(history?.cancelledAppointments || []).map((apt) => (
+                {paginatedCancelledAppointments.map((apt) => (
                   <div key={apt.id} className="p-6 hover:bg-gray-50 transition">
                     <div className="flex items-center justify-between">
                       <div>
@@ -285,6 +319,13 @@ export default function ClientHistory() {
                 ))}
               </div>
             )}
+            <DashboardPagination
+              currentPage={cancelledPage}
+              totalItems={cancelledAppointments.length}
+              pageSize={pageSize}
+              onPageChange={setCancelledPage}
+              itemLabel="cancelled appointments"
+            />
           </div>
 
           {/* Monthly Breakdown Chart */}

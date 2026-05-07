@@ -1,11 +1,16 @@
 import { AlertCircle, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import { api, AdminDashboardResponse, FeedbackResponse } from "@/lib/api";
 
 export default function AdminDashboard() {
+  const activityPageSize = 5;
+  const feedbackPageSize = 3;
   const [dashboard, setDashboard] = useState<AdminDashboardResponse | null>(null);
   const [recentFeedback, setRecentFeedback] = useState<FeedbackResponse[]>([]);
+  const [activityPage, setActivityPage] = useState(1);
+  const [feedbackPage, setFeedbackPage] = useState(1);
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -18,7 +23,7 @@ export default function AdminDashboard() {
 
       try {
         const feedback = await api.getAllFeedback();
-        setRecentFeedback(feedback.slice(0, 5));
+        setRecentFeedback(feedback);
       } catch {
         setRecentFeedback([]);
       }
@@ -32,6 +37,26 @@ export default function AdminDashboard() {
     }
     return Math.max(...dashboard.weeklyTrend.map((item) => item.value), 1);
   }, [dashboard]);
+
+  const recentActivity = dashboard?.recentActivity || [];
+  const paginatedActivity = recentActivity.slice(
+    (activityPage - 1) * activityPageSize,
+    activityPage * activityPageSize,
+  );
+  const paginatedFeedback = recentFeedback.slice(
+    (feedbackPage - 1) * feedbackPageSize,
+    feedbackPage * feedbackPageSize,
+  );
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(recentActivity.length / activityPageSize));
+    setActivityPage((page) => Math.min(page, totalPages));
+  }, [recentActivity.length]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(recentFeedback.length / feedbackPageSize));
+    setFeedbackPage((page) => Math.min(page, totalPages));
+  }, [recentFeedback.length]);
 
   return (
     <AdminLayout>
@@ -142,7 +167,7 @@ export default function AdminDashboard() {
               </div>
               <div className="p-6">
                 <div className="space-y-3">
-                  {(dashboard?.recentActivity || []).map((activity, idx) => (
+                  {paginatedActivity.map((activity, idx) => (
                     <div key={idx} className="flex items-start justify-between py-3 border-b border-gray-100 last:border-b-0">
                       <div>
                         <p className="font-medium text-gray-900">{activity.event}</p>
@@ -151,8 +176,18 @@ export default function AdminDashboard() {
                       <span className="text-xs text-gray-500 flex-shrink-0">{activity.timeAgo}</span>
                     </div>
                   ))}
+                  {recentActivity.length === 0 && (
+                    <p className="text-sm text-gray-500">No recent activity available.</p>
+                  )}
                 </div>
               </div>
+              <DashboardPagination
+                currentPage={activityPage}
+                totalItems={recentActivity.length}
+                pageSize={activityPageSize}
+                onPageChange={setActivityPage}
+                itemLabel="activities"
+              />
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -162,7 +197,7 @@ export default function AdminDashboard() {
               </div>
               <div className="p-6 space-y-4">
                 {recentFeedback.length > 0 ? (
-                  recentFeedback.map((feedback) => (
+                  paginatedFeedback.map((feedback) => (
                     <div key={feedback.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -191,6 +226,13 @@ export default function AdminDashboard() {
                   <p className="text-sm text-gray-500">No feedback available yet.</p>
                 )}
               </div>
+              <DashboardPagination
+                currentPage={feedbackPage}
+                totalItems={recentFeedback.length}
+                pageSize={feedbackPageSize}
+                onPageChange={setFeedbackPage}
+                itemLabel="reviews"
+              />
             </div>
           </div>
         </div>

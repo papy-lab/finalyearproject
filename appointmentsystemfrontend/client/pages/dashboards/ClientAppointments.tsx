@@ -3,6 +3,7 @@ import { MapPin, Plus, Filter, Search, Edit2, X, CheckCircle2, AlertCircle, Cloc
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ClientLayout from "@/components/layout/ClientLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import { api, AppointmentResponse } from "@/lib/api";
 import {
   Dialog,
@@ -15,10 +16,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 export default function ClientAppointments() {
+  const pageSize = 8;
   const { user } = useAuth();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [appointments, setAppointments] = useState<Array<{
     id: string;
@@ -175,6 +178,20 @@ export default function ClientAppointments() {
     return matchesSearch && matchesFilter;
   });
 
+  const paginatedAppointments = filteredAppointments.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / pageSize));
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [filteredAppointments.length]);
+
   const getStatusColor = (status: string) => {
     switch(status) {
       case "Confirmed":
@@ -285,7 +302,7 @@ export default function ClientAppointments() {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-200">
-                  {filteredAppointments.map((apt) => (
+                  {paginatedAppointments.map((apt) => (
                     <div key={apt.id} className="p-6 hover:bg-gray-50 transition">
                       <div className="grid md:grid-cols-3 gap-6 items-start">
                         {/* Left - Date & Time */}
@@ -349,6 +366,13 @@ export default function ClientAppointments() {
                   ))}
                 </div>
               )}
+              <DashboardPagination
+                currentPage={currentPage}
+                totalItems={filteredAppointments.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                itemLabel="appointments"
+              />
             </div>
 
             {/* Help Section */}

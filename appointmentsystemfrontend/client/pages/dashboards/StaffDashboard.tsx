@@ -1,6 +1,7 @@
 import { TrendingUp, Clock, CheckCircle2, Calendar, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import StaffLayout from "@/components/layout/StaffLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import { useAuth } from "@/context/AuthContext";
 import { api, AppointmentResponse, FeedbackResponse } from "@/lib/api";
 
@@ -15,9 +16,13 @@ interface Appointment {
 }
 
 export default function StaffDashboard() {
+  const appointmentPageSize = 5;
+  const feedbackPageSize = 3;
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [recentFeedback, setRecentFeedback] = useState<FeedbackResponse[]>([]);
+  const [appointmentPage, setAppointmentPage] = useState(1);
+  const [feedbackPage, setFeedbackPage] = useState(1);
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -49,7 +54,7 @@ export default function StaffDashboard() {
       try {
         if (user?.id) {
           const feedback = await api.getFeedbackForStaff(user.id);
-          setRecentFeedback(feedback.slice(0, 5));
+          setRecentFeedback(feedback);
         } else {
           setRecentFeedback([]);
         }
@@ -117,6 +122,25 @@ export default function StaffDashboard() {
     }
   ];
 
+  const paginatedAppointments = appointments.slice(
+    (appointmentPage - 1) * appointmentPageSize,
+    appointmentPage * appointmentPageSize,
+  );
+  const paginatedFeedback = recentFeedback.slice(
+    (feedbackPage - 1) * feedbackPageSize,
+    feedbackPage * feedbackPageSize,
+  );
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(appointments.length / appointmentPageSize));
+    setAppointmentPage((page) => Math.min(page, totalPages));
+  }, [appointments.length]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(recentFeedback.length / feedbackPageSize));
+    setFeedbackPage((page) => Math.min(page, totalPages));
+  }, [recentFeedback.length]);
+
   return (
     <StaffLayout>
       <div className="p-4 sm:p-8">
@@ -153,7 +177,7 @@ export default function StaffDashboard() {
 
               <div className="p-6 space-y-4">
                 {appointments.length > 0 ? (
-                  appointments.map((apt) => (
+                  paginatedAppointments.map((apt) => (
                     <div
                       key={apt.id}
                       className="flex items-start justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition"
@@ -188,6 +212,13 @@ export default function StaffDashboard() {
                   <p className="text-center text-gray-500 py-8">No upcoming appointments</p>
                 )}
               </div>
+              <DashboardPagination
+                currentPage={appointmentPage}
+                totalItems={appointments.length}
+                pageSize={appointmentPageSize}
+                onPageChange={setAppointmentPage}
+                itemLabel="appointments"
+              />
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -198,7 +229,7 @@ export default function StaffDashboard() {
 
               <div className="p-6 space-y-4">
                 {recentFeedback.length > 0 ? (
-                  recentFeedback.map((feedback) => (
+                  paginatedFeedback.map((feedback) => (
                     <div key={feedback.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -227,6 +258,13 @@ export default function StaffDashboard() {
                   <p className="text-sm text-gray-500">No feedback available yet.</p>
                 )}
               </div>
+              <DashboardPagination
+                currentPage={feedbackPage}
+                totalItems={recentFeedback.length}
+                pageSize={feedbackPageSize}
+                onPageChange={setFeedbackPage}
+                itemLabel="reviews"
+              />
             </div>
           </div>
         </div>

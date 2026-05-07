@@ -1,6 +1,7 @@
 import { Star, MessageSquare, TrendingUp, Smile, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import StaffLayout from "@/components/layout/StaffLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import { api, FeedbackResponse } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -17,8 +18,10 @@ interface FeedbackItem {
 }
 
 export default function StaffFeedback() {
+  const pageSize = 8;
   const { user } = useAuth();
   const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,6 +100,16 @@ export default function StaffFeedback() {
     feedbackList.length > 0
       ? ((positiveCount / feedbackList.length) * 100).toFixed(0)
       : "0";
+
+  const paginatedFeedbackList = feedbackList.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(feedbackList.length / pageSize));
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [feedbackList.length]);
 
   if (loading) {
     return (
@@ -302,7 +315,7 @@ export default function StaffFeedback() {
               </div>
             ) : (
               <div className="grid gap-4">
-                {feedbackList.map((feedback) => (
+                {paginatedFeedbackList.map((feedback) => (
                   <div
                     key={feedback.id}
                     className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition"
@@ -349,6 +362,13 @@ export default function StaffFeedback() {
                 ))}
               </div>
             )}
+            <DashboardPagination
+              currentPage={currentPage}
+              totalItems={feedbackList.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemLabel="feedback entries"
+            />
           </div>
         </div>
       </div>

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import {
   api,
   DepartmentResponse,
@@ -34,11 +35,13 @@ interface StaffMember {
 }
 
 export default function AdminStaffManagement() {
+  const pageSize = 10;
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [departments, setDepartments] = useState<DepartmentResponse[]>([]);
   const [services, setServices] = useState<ServiceCatalogResponse[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDepartment, setFilterDepartment] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addLoading, setAddLoading] = useState(false);
@@ -107,6 +110,11 @@ export default function AdminStaffManagement() {
     return matchesSearch && matchesDepartment;
   });
 
+  const paginatedStaff = filteredStaff.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+
   const activeStaff = staff.filter((s) => s.status === "active").length;
   const totalAppointments = staff.reduce(
     (sum, s) => sum + s.appointmentsHandled,
@@ -152,6 +160,15 @@ export default function AdminStaffManagement() {
     };
     loadData();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterDepartment]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredStaff.length / pageSize));
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [filteredStaff.length]);
 
   const handleAddStaff = async () => {
     if (
@@ -507,7 +524,7 @@ export default function AdminStaffManagement() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-visible">
             <div className="md:hidden p-4 space-y-3">
-              {filteredStaff.map((member) => (
+              {paginatedStaff.map((member) => (
                 <div
                   key={member.id}
                   className="border border-gray-200 rounded-lg p-4"
@@ -642,7 +659,7 @@ export default function AdminStaffManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredStaff.map((member) => (
+                  {paginatedStaff.map((member) => (
                     <tr
                       key={member.id}
                       className="border-b border-gray-200 hover:bg-gray-50 transition"
@@ -745,6 +762,13 @@ export default function AdminStaffManagement() {
                 No staff members found matching your criteria.
               </div>
             )}
+            <DashboardPagination
+              currentPage={currentPage}
+              totalItems={filteredStaff.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemLabel="staff members"
+            />
           </div>
 
           {deleteTarget && (

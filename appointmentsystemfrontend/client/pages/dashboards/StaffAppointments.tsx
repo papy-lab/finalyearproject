@@ -1,6 +1,7 @@
 import { Search, Filter, CheckCircle2, Ban, Clock3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import StaffLayout from "@/components/layout/StaffLayout";
+import DashboardPagination from "@/components/DashboardPagination";
 import { api, AppointmentResponse } from "@/lib/api";
 
 interface Appointment {
@@ -15,11 +16,13 @@ interface Appointment {
 }
 
 export default function StaffAppointments() {
+  const pageSize = 10;
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -60,6 +63,20 @@ export default function StaffAppointments() {
     const matchesStatus = filterStatus === "all" || apt.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  const paginatedAppointments = filteredAppointments.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / pageSize));
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [filteredAppointments.length]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -150,7 +167,7 @@ export default function StaffAppointments() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAppointments.map((apt) => (
+                  {paginatedAppointments.map((apt) => (
                     <tr key={apt.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
                       <td className="px-6 py-4">
                         <div>
@@ -219,6 +236,13 @@ export default function StaffAppointments() {
                 No appointments found matching your criteria.
               </div>
             )}
+            <DashboardPagination
+              currentPage={currentPage}
+              totalItems={filteredAppointments.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemLabel="appointments"
+            />
           </div>
         </div>
       </div>
