@@ -20,11 +20,11 @@ import {
 } from "recharts";
 
 export default function AdminReports() {
-  const pageSize = 10;
   const [dateRange, setDateRange] = useState("month");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [exportMessage, setExportMessage] = useState("");
   const [loadError, setLoadError] = useState("");
@@ -77,7 +77,7 @@ export default function AdminReports() {
   const paginatedAppointments = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredAppointments.slice(start, start + pageSize);
-  }, [currentPage, filteredAppointments]);
+  }, [currentPage, filteredAppointments, pageSize]);
 
   const toReportRef = (id: string) => `APT-${id.slice(0, 8).toUpperCase()}`;
 
@@ -262,7 +262,7 @@ export default function AdminReports() {
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / pageSize));
     setCurrentPage((page) => Math.min(page, totalPages));
-  }, [filteredAppointments.length]);
+  }, [filteredAppointments.length, pageSize]);
 
   useEffect(() => {
     const loadDepartments = async () => {
@@ -671,6 +671,10 @@ export default function AdminReports() {
               totalItems={filteredAppointments.length}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
               itemLabel="report rows"
             />
           </div>

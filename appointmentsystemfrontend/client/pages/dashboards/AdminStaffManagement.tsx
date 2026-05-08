@@ -35,12 +35,12 @@ interface StaffMember {
 }
 
 export default function AdminStaffManagement() {
-  const pageSize = 10;
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [departments, setDepartments] = useState<DepartmentResponse[]>([]);
   const [services, setServices] = useState<ServiceCatalogResponse[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDepartment, setFilterDepartment] = useState<string>("all");
+  const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -168,7 +168,7 @@ export default function AdminStaffManagement() {
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(filteredStaff.length / pageSize));
     setCurrentPage((page) => Math.min(page, totalPages));
-  }, [filteredStaff.length]);
+  }, [filteredStaff.length, pageSize]);
 
   const handleAddStaff = async () => {
     if (
@@ -767,6 +767,10 @@ export default function AdminStaffManagement() {
               totalItems={filteredStaff.length}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
               itemLabel="staff members"
             />
           </div>

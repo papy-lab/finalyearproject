@@ -36,11 +36,11 @@ interface Appointment {
 }
 
 export default function AdminAppointments() {
-  const pageSize = 10;
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -213,7 +213,7 @@ export default function AdminAppointments() {
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / pageSize));
     setCurrentPage((page) => Math.min(page, totalPages));
-  }, [filteredAppointments.length]);
+  }, [filteredAppointments.length, pageSize]);
 
   return (
     <AdminLayout>
@@ -417,6 +417,10 @@ export default function AdminAppointments() {
               totalItems={filteredAppointments.length}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
               itemLabel="appointments"
             />
           </div>

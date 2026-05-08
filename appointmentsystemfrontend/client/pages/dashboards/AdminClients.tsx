@@ -7,10 +7,10 @@ import { api, ClientResponse } from "@/lib/api";
 type StatusFilter = "all" | "active" | "inactive";
 
 export default function AdminClients() {
-  const pageSize = 10;
   const [clients, setClients] = useState<ClientResponse[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("all");
+  const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -64,7 +64,7 @@ export default function AdminClients() {
   const paginatedClients = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredClients.slice(start, start + pageSize);
-  }, [currentPage, filteredClients]);
+  }, [currentPage, filteredClients, pageSize]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -73,7 +73,7 @@ export default function AdminClients() {
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(filteredClients.length / pageSize));
     setCurrentPage((page) => Math.min(page, totalPages));
-  }, [filteredClients.length]);
+  }, [filteredClients.length, pageSize]);
 
   const openConfirmDialog = (client: ClientResponse) => {
     setClientToToggle(client);
@@ -269,6 +269,10 @@ export default function AdminClients() {
               totalItems={filteredClients.length}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
               itemLabel="clients"
             />
           </div>

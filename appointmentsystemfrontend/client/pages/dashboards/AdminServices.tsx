@@ -5,8 +5,8 @@ import DashboardPagination from "@/components/DashboardPagination";
 import { api, DepartmentResponse, ServiceCatalogResponse } from "@/lib/api";
 
 export default function AdminServices() {
-  const pageSize = 10;
   const [services, setServices] = useState<ServiceCatalogResponse[]>([]);
+  const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [departments, setDepartments] = useState<DepartmentResponse[]>([]);
   const [open, setOpen] = useState(false);
@@ -40,7 +40,7 @@ export default function AdminServices() {
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(services.length / pageSize));
     setCurrentPage((page) => Math.min(page, totalPages));
-  }, [services.length]);
+  }, [services.length, pageSize]);
 
   const paginatedServices = services.slice(
     (currentPage - 1) * pageSize,
@@ -185,6 +185,10 @@ export default function AdminServices() {
               totalItems={services.length}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
               itemLabel="services"
             />
           </div>

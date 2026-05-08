@@ -5,8 +5,8 @@ import DashboardPagination from "@/components/DashboardPagination";
 import { api, FeedbackResponse } from "@/lib/api";
 
 export default function AdminFeedback() {
-  const pageSize = 8;
   const [feedbacks, setFeedbacks] = useState<FeedbackResponse[]>([]);
+  const [pageSize, setPageSize] = useState(8);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +81,7 @@ export default function AdminFeedback() {
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(feedbacks.length / pageSize));
     setCurrentPage((page) => Math.min(page, totalPages));
-  }, [feedbacks.length]);
+  }, [feedbacks.length, pageSize]);
 
   return (
     <AdminLayout>
@@ -291,6 +291,11 @@ export default function AdminFeedback() {
                 totalItems={feedbacks.length}
                 pageSize={pageSize}
                 onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
+                pageSizeOptions={[3, 5, 8, 10, 20]}
                 itemLabel="feedback entries"
               />
             </div>
